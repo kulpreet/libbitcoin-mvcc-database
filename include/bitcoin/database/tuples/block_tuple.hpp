@@ -49,28 +49,28 @@ struct block_tuple {
 
     // header data, 80 bytes
     // 32 bytes
-    const hash_digest previous_block_hash_;
+    hash_digest previous_block_hash;
     // 32 bytes
-    const hash_digest merkle_root_;
+    hash_digest merkle_root;
     // 4 bytes
-    const uint32_t version_;
+    uint32_t version;
     // 4 bytes
-    const uint32_t timestamp_;
+    uint32_t timestamp;
     // 4 bytes
-    const uint32_t bits_;
+    uint32_t bits;
     // 4 bytes
-    const uint32_t nonce_;
+    uint32_t nonce;
 
     // block data, 17 bytes (24 after padding state with 7 bytes)
 
     // 8 bytes (assumption)
-    const size_t height;
+    size_t height;
     // 4 bytes
-    const uint32_t median_time_past;
+    uint32_t median_time_past;
     // 4 bytes
-    const uint32_t checksum;
+    uint32_t checksum;
     // 1 byte
-    const uint8_t state;
+    uint8_t state;
 };
 
 typedef std::shared_ptr<block_tuple> block_tuple_ptr;

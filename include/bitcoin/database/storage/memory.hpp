@@ -1,13 +1,16 @@
-#ifndef LIBBITCOIN_MVCC_MEMORY_BLOCKS_HPP
-#define LIBBITCOIN_MVCC_MEMORY_BLOCKS_HPP
+#ifndef LIBBITCOIN_MVCC_MEMORY_HPP
+#define LIBBITCOIN_MVCC_MEMORY_HPP
 
 #include <bitcoin/system.hpp>
 
 namespace libbitcoin {
 namespace database {
+namespace storage {
 
 /*
  * Allocate and free memory for storing tuples.
+ *
+ * TODO:
  *
  * Uses a pool of memory blocks, that are locked by threads when they
  * are writing a tuple in the block.
@@ -19,13 +22,28 @@ namespace database {
  * slot is returned to the list of tuple slots that can be reused for
  * next tuple allocation.
  */
+template <typename T>
 class memory
   : system::noncopyable
 {
+public:
+    typedef std::shared_ptr<T> memory_ptr;
 
+    // TODO: construct a memory allocator/deallocator
+    memory() = default;
+
+    // TODO: destroy the memory allocator; free all allocated memory calling
+    // destructor on those objects
+    ~memory() = default;
+
+    // Allocate memory for holding a single T
+    memory_ptr allocate();
 };
 
 }
 }
+}
+
+#include <bitcoin/database/storage/memory.ipp>
 
 #endif

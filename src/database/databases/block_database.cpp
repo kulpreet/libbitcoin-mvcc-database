@@ -27,10 +27,36 @@ using namespace bc::system;
 using namespace bc::system::chain;
 using namespace bc::database::tuples;
 
+block_database::block_database(block_tuple_memory_store& store)
+    : memory_store(store)
+{
+}
+
 block_tuple_ptr block_database::store(const system::chain::header& header,
     const size_t height, const uint32_t median_time_past,
     const uint32_t checksum, const uint8_t state)
 {
+    // get memory using the memory store
+    auto memory_ptr = memory_store.allocate();
+
+    if (memory_ptr == nullptr)
+        return nullptr;
+
+    // set header data
+    memory_ptr->previous_block_hash = header.previous_block_hash();
+    memory_ptr->merkle_root = header.merkle_root();
+    memory_ptr->version = header.version();
+    memory_ptr->timestamp = header.timestamp();
+    memory_ptr->bits = header.bits();
+    memory_ptr->nonce = header.nonce();
+
+    // set block data
+    memory_ptr->height = height;
+    memory_ptr->median_time_past = median_time_past;
+    memory_ptr->checksum = checksum;
+    memory_ptr->state = state;
+
+    return memory_ptr;
 }
 
 } // namespace database

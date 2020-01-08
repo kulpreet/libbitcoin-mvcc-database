@@ -30,17 +30,20 @@ namespace database {
 
 using namespace bc::database::tuples;
 
+using block_tuple_memory_store = storage::memory<block_tuple>;
+
 /// Stores block_headers each with a list of transaction indexes.
 /// Lookup possible by hash or height.
 class BCD_API block_database
 {
 public:
-
     /// Construct the database.
-    block_database();
+    block_database(block_tuple_memory_store& store);
 
-    /// Close the database (all threads must first be stopped).
-    ~block_database();
+    /// TODO: Take a snapshot.
+    /// TODO: Free all used memory - requires us to switch to object
+    /// pool first.
+    ~block_database() = default;
 
     // Startup and shutdown.
     // ------------------------------------------------------------------------
@@ -96,6 +99,7 @@ public:
         bool candidate);
 
 private:
+    block_tuple_memory_store& memory_store;
 };
 
 } // namespace database

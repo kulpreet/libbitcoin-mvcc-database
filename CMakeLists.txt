@@ -181,11 +181,12 @@ endif()
 if (with-tests)
   add_executable( libbitcoin-mvcc-database-test
     "./test/main.cpp"
+    "./test/databases/block_database.cpp"
     "./test/tuples/block_tuple.cpp" )
 
     add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
             --run_test=*
-            --show_progress=no
+            --show_progress=yes
             --detect_memory_leak=0
             --report_level=no
             --build_info=yes )
