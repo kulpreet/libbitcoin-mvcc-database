@@ -1,0 +1,104 @@
+/**
+ * Copyright (c) 2011-2019 libbitcoin developers (see AUTHORS)
+ *
+ * This file is part of libbitcoin.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#ifndef LIBBITCOIN_MVCC_DATABASE_BLOCK_DATABASE_HPP
+#define LIBBITCOIN_MVCC_DATABASE_BLOCK_DATABASE_HPP
+
+#include <atomic>
+#include <cstddef>
+#include <bitcoin/system.hpp>
+#include <bitcoin/database/define.hpp>
+#include <bitcoin/database/tuples/block_tuple.hpp>
+
+namespace libbitcoin {
+namespace database {
+
+using namespace bc::database::tuples;
+
+/// Stores block_headers each with a list of transaction indexes.
+/// Lookup possible by hash or height.
+class BCD_API block_database
+{
+public:
+
+    /// Construct the database.
+    block_database();
+
+    /// Close the database (all threads must first be stopped).
+    ~block_database();
+
+    // Startup and shutdown.
+    // ------------------------------------------------------------------------
+
+    /// Initialize a new transaction database.
+    bool create();
+
+    /// Call before using the database.
+    bool open();
+
+    /// Commit latest inserts.
+    void commit();
+
+    /// Compact and write latest snapshot
+    bool close();
+
+    // Queries.
+    //-------------------------------------------------------------------------
+
+    /// The height of the highest candidate|confirmed block.
+    bool top(size_t& out_height, bool candidate) const;
+
+    // /// Fetch block by block|header index height.
+    // block_result get(size_t height, bool candidate) const;
+
+    // /// Fetch block by hash.
+    // block_result get(const system::hash_digest& hash) const;
+
+    /// Populate header metadata for the given header.
+    void get_header_metadata(const system::chain::header& header) const;
+
+    // Writers.
+    // ------------------------------------------------------------------------
+
+    /// Store header, validated at height, candidate, pending (but
+    /// unindexed).
+    /// Return memory location where data is stored and null_ptr on error.
+    block_tuple_ptr store(const system::chain::header& header,
+        const size_t height, const uint32_t median_time_past,
+        const uint32_t checksum, const uint8_t state);
+
+    /// Populate pooled block transaction references, state is unchanged.
+    bool update_transactions(const system::chain::block& block);
+
+    /// Promote pooled block to valid|invalid and set code.
+    bool validate(const system::hash_digest& hash, const system::code& error);
+
+    /// Promote pooled|candidate block to candidate|confirmed respectively.
+    bool promote(const system::hash_digest& hash, size_t height, bool candidate);
+
+    /// Demote candidate|confirmed header to pooled|pooled (not candidate).
+    bool demote(const system::hash_digest& hash, size_t height,
+        bool candidate);
+
+private:
+};
+
+} // namespace database
+} // namespace libbitcoin
+
+#endif

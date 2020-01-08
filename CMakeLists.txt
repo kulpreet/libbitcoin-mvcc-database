@@ -148,7 +148,8 @@ endif()
 # Define ${CANONICAL_LIB_NAME} project.
 #------------------------------------------------------------------------------
 add_library( ${CANONICAL_LIB_NAME}
-    "./src/transaction_management/transaction_manager.cpp" )
+    "./src/database/transaction_management/transaction_manager.cpp"
+    "./src/database/databases/block_database.cpp" )
 
 # ${CANONICAL_LIB_NAME} project specific include directories.
 #------------------------------------------------------------------------------
@@ -175,30 +176,32 @@ else()
         ${bitcoin_system_STATIC_LIBRARIES} )
 endif()
 
-# Define libbitcoin-database-test project.
+# Define libbitcoin-mvcc-database-test project.
+# ------------------------------------------------------------------------------
+if (with-tests)
+  add_executable( libbitcoin-mvcc-database-test
+    "./test/main.cpp"
+    "./test/tuples/block_tuple.cpp" )
+
+    add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
+            --run_test=*
+            --show_progress=no
+            --detect_memory_leak=0
+            --report_level=no
+            --build_info=yes )
+
+#    libbitcoin-mvcc-database-test project specific include directories.
+# ------------------------------------------------------------------------------
+    target_include_directories( libbitcoin-mvcc-database-test PRIVATE
+        "./include" )
+
+#    libbitcoin-mvcc-database-test project specific libraries/linker flags.
 #------------------------------------------------------------------------------
-# if (with-tests)
-#     add_executable( libbitcoin-database-test )
+    target_link_libraries( libbitcoin-mvcc-database-test
+        ${CANONICAL_LIB_NAME}
+        ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} )
 
-#     add_test( NAME libbitcoin-database-test COMMAND libbitcoin-database-test
-#             --run_test=*
-#             --show_progress=no
-#             --detect_memory_leak=0
-#             --report_level=no
-#             --build_info=yes )
-
-#     libbitcoin-database-test project specific include directories.
-#------------------------------------------------------------------------------
-    # target_include_directories( libbitcoin-database-test PRIVATE
-    #     "./include" )
-
-#     libbitcoin-database-test project specific libraries/linker flags.
-#------------------------------------------------------------------------------
-    # target_link_libraries( libbitcoin-database-test
-    #     ${CANONICAL_LIB_NAME}
-    #     ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} )
-
-# endif()
+endif()
 
 # Define initchain project.
 #------------------------------------------------------------------------------
