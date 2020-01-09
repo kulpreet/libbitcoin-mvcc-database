@@ -16,23 +16,34 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
+
+#ifndef LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
+#define LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
+
+#include <atomic>
+#include <cstddef>
 
 #include <bitcoin/system.hpp>
-#include <bitcoin/database/tuples/block_tuple.hpp>
-#include <bitcoin/database/tuples/block_tuple_delta.hpp>
+#include <bitcoin/database/define.hpp>
+#include <bitcoin/database/storage/memory.hpp>
 
-using namespace bc::database::tuples;
+namespace libbitcoin {
+namespace database {
+namespace tuples {
 
-BOOST_AUTO_TEST_SUITE(block_tuples_tests)
+using namespace system;
 
-BOOST_AUTO_TEST_CASE(block_tuple__sizeof__returns_128__success)
-{
-    auto result = sizeof(block_tuple);
-    BOOST_REQUIRE_EQUAL(result, 104);
+/*
+ * Struct to hold old values. We are following the N2O order in our
+ * delta table.
+ */
+struct block_tuple_delta {
+    // 1 byte
+    uint8_t state;
+};
 
-    auto delta_result = sizeof(block_tuple_delta);
-    BOOST_REQUIRE_EQUAL(delta_result, 1);
-}
+} // namespace tuples
+} // namespace database
+} // namespace libbitcoin
 
-BOOST_AUTO_TEST_SUITE_END()
+#endif
