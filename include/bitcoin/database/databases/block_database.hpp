@@ -25,12 +25,16 @@
 #include <bitcoin/database/define.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
 
+#include <libcuckoo/cuckoohash_map.hh>
+
 namespace libbitcoin {
 namespace database {
 
 using namespace bc::database::tuples;
 
 using block_tuple_memory_store = storage::memory<block_tuple>;
+using height_index_map = libcuckoo::cuckoohash_map<size_t, block_tuple_ptr>;
+using hash_digest_index_map = libcuckoo::cuckoohash_map<system::hash_digest, block_tuple_ptr>;
 
 /// Stores block_headers each with a list of transaction indexes.
 /// Lookup possible by hash or height.
@@ -67,10 +71,10 @@ public:
     bool top(size_t& out_height, bool candidate) const;
 
     // /// Fetch block by block|header index height.
-    // block_result get(size_t height, bool candidate) const;
+    block_tuple_ptr get(size_t height, bool candidate) const;
 
     // /// Fetch block by hash.
-    // block_result get(const system::hash_digest& hash) const;
+    block_tuple_ptr get(const system::hash_digest& hash) const;
 
     /// Populate header metadata for the given header.
     void get_header_metadata(const system::chain::header& header) const;
@@ -91,7 +95,8 @@ public:
     /// Promote pooled block to valid|invalid and set code.
     bool validate(const system::hash_digest& hash, const system::code& error);
 
-    /// Promote pooled|candidate block to candidate|confirmed respectively.
+    /// Promote pooled|candidate block to candidate|confirmed
+    /// respectively.
     bool promote(const system::hash_digest& hash, size_t height, bool candidate);
 
     /// Demote candidate|confirmed header to pooled|pooled (not candidate).
@@ -100,6 +105,21 @@ public:
 
 private:
     block_tuple_memory_store& memory_store;
+
+    // Blockchain first stores which puts block in
+    // candidate_index.  Later block is promoted to candidate and from
+    // there can be demoted to pool. A block is never moved from
+    // candidate to confirmed, so we don't need to update two indexes
+    // in the same transaction.
+
+    // indexes
+    height_index_map candidate_index;
+    height_index_map confirmed_index;
+    hash_digest_index_map hash_digest_index;
+
+    // tracking top
+    std::atomic<size_t> candidate_top;
+    std::atomic<size_t> confirmed_top;
 };
 
 } // namespace database

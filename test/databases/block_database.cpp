@@ -40,7 +40,7 @@ transaction random_tx(size_t fudge)
 
 BOOST_AUTO_TEST_SUITE(block_database_tests)
 
-BOOST_AUTO_TEST_CASE(block_database__store__allocate_and_store__success)
+BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
 {
     block_tuple_memory_store memory_store;
     block_database instance(memory_store);
@@ -53,9 +53,12 @@ BOOST_AUTO_TEST_CASE(block_database__store__allocate_and_store__success)
        random_tx(1)
     });
 
-    auto result = instance.store(block0.header(), 100, 1, 100, 0);
-    BOOST_REQUIRE(result->previous_block_hash == block0.header().previous_block_hash());
-    BOOST_REQUIRE(result->height == 100);
+    auto from_store = instance.store(block0.header(), 100, 1, 100, 0);
+    BOOST_REQUIRE(from_store->previous_block_hash == block0.header().previous_block_hash());
+    BOOST_REQUIRE(from_store->height == 100);
+
+    auto from_index = instance.get(block0.header().hash());
+    BOOST_REQUIRE_EQUAL(from_index, from_store);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

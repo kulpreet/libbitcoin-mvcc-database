@@ -28,9 +28,18 @@ using namespace bc::system::chain;
 using namespace bc::database::tuples;
 
 block_database::block_database(block_tuple_memory_store& store)
-    : memory_store(store)
+    : memory_store(store), candidate_top(0), confirmed_top(0)
 {
 }
+
+bool block_database::top(size_t& out_height, bool candidate) const
+{
+    out_height = candidate ? candidate_top.load() : confirmed_top.load();
+    if (out_height == 0)
+        return false;
+    return true;
+}
+
 
 block_tuple_ptr block_database::store(const system::chain::header& header,
     const size_t height, const uint32_t median_time_past,
@@ -56,7 +65,26 @@ block_tuple_ptr block_database::store(const system::chain::header& header,
     memory_ptr->checksum = checksum;
     memory_ptr->state = state;
 
+    hash_digest_index.insert(header.hash(), memory_ptr);
     return memory_ptr;
+}
+
+// Find the block from the hash_digest index and
+// find the readable version for the transaction timestamp
+block_tuple_ptr block_database::get(const system::hash_digest& hash) const
+{
+    auto block_tuple = hash_digest_index.find(hash);
+    return block_tuple;
+}
+
+// Find block from block hash index and then update it.
+// The update won't be visible until the transaction is committed
+bool block_database::promote(const system::hash_digest &hash, size_t height,
+    bool candidate)
+{
+    // auto block_ptr = hash_digest_index.find(hash);
+    // if (candidate) {
+    // }
 }
 
 } // namespace database
