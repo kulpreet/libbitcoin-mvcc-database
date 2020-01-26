@@ -1,3 +1,11 @@
+# Build
+
+Uses cmake. Requires libbitcoin-system.
+
+`mkdir build && cd build`
+`PKG_CONFIG_PATH=path/to/libbitcoin-system/lib/pkgconfig/ cmake ../`
+`make && make test`
+
 # Goals
 
 1. In memory multi version concurrency control.

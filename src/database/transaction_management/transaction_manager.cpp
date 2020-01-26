@@ -32,7 +32,7 @@ transaction_manager::transaction_manager()
 transaction_context transaction_manager::begin_transaction()
 {
     scopedspinlatch latch(latch_);
-    auto start_time = time_++;
+    auto start_time = ++time_;
 
     transaction_context context(start_time, state::active);
 

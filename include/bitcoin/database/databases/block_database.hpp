@@ -24,6 +24,8 @@
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
+#include <bitcoin/database/tuples/block_tuple_delta.hpp>
+#include <bitcoin/database/tuples/mvcc_record.hpp>
 
 #include <libcuckoo/cuckoohash_map.hh>
 
@@ -32,9 +34,19 @@ namespace database {
 
 using namespace bc::database::tuples;
 
-using block_tuple_memory_store = storage::memory<block_tuple>;
-using height_index_map = libcuckoo::cuckoohash_map<size_t, block_tuple_ptr>;
-using hash_digest_index_map = libcuckoo::cuckoohash_map<system::hash_digest, block_tuple_ptr>;
+// block tuple wrapped in mvcc record
+using block_mvcc_record = mvcc_record<block_tuple_ptr, block_delta_ptr>;
+// memory allocator for block mvcc record
+using block_tuple_memory_store = storage::memory<block_mvcc_record>;
+
+// block delta record wrapped in mvcc record
+using delta_mvcc_record = mvcc_record<block_delta_ptr, block_delta_ptr>;
+// memory allocator for block delta mvcc record
+using block_delta_memory_store = storage::memory<delta_mvcc_record>;
+
+// index for block mvcc record
+using height_index_map = libcuckoo::cuckoohash_map<size_t, block_mvcc_record>;
+using hash_digest_index_map = libcuckoo::cuckoohash_map<system::hash_digest, block_mvcc_record>;
 
 /// Stores block_headers each with a list of transaction indexes.
 /// Lookup possible by hash or height.
@@ -42,7 +54,7 @@ class BCD_API block_database
 {
 public:
     /// Construct the database.
-    block_database(block_tuple_memory_store& store);
+    block_database(block_tuple_memory_store&, block_delta_memory_store&);
 
     /// TODO: Take a snapshot.
     /// TODO: Free all used memory - requires us to switch to object
@@ -104,7 +116,8 @@ public:
         bool candidate);
 
 private:
-    block_tuple_memory_store& memory_store;
+    block_tuple_memory_store& master_memory_store_;
+    block_delta_memory_store& delta_memory_store_;
 
     // Blockchain first stores which puts block in
     // candidate_index.  Later block is promoted to candidate and from
@@ -113,13 +126,13 @@ private:
     // in the same transaction.
 
     // indexes
-    height_index_map candidate_index;
-    height_index_map confirmed_index;
-    hash_digest_index_map hash_digest_index;
+    height_index_map candidate_index_;
+    height_index_map confirmed_index_;
+    hash_digest_index_map hash_digest_index_;
 
     // tracking top
-    std::atomic<size_t> candidate_top;
-    std::atomic<size_t> confirmed_top;
+    std::atomic<size_t> candidate_top_;
+    std::atomic<size_t> confirmed_top_;
 };
 
 } // namespace database

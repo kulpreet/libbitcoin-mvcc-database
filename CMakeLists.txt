@@ -182,6 +182,7 @@ if (with-tests)
   add_executable( libbitcoin-mvcc-database-test
     "./test/main.cpp"
     "./test/databases/block_database.cpp"
+    "./test/transaction_management/transaction_manager.cpp"
     "./test/tuples/block_tuple.cpp" )
 
     add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test

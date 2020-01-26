@@ -16,49 +16,49 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/test/unit_test.hpp>
+// #include <boost/test/unit_test.hpp>
 
-#include <bitcoin/system.hpp>
-#include <bitcoin/database/tuples/block_tuple.hpp>
-#include <bitcoin/database/databases/block_database.hpp>
+// #include <bitcoin/system.hpp>
+// #include <bitcoin/database/tuples/block_tuple.hpp>
+// #include <bitcoin/database/databases/block_database.hpp>
 
-using namespace bc;
-using namespace bc::system::chain;
-using namespace bc::database;
-using namespace bc::database::tuples;
+// using namespace bc;
+// using namespace bc::system::chain;
+// using namespace bc::database;
+// using namespace bc::database::tuples;
 
-transaction random_tx(size_t fudge)
-{
-    static const auto settings = system::settings(
-        system::config::settings::mainnet);
-    static const chain::block genesis = settings.genesis_block;
-    auto tx = genesis.transactions()[0];
-    tx.inputs()[0].previous_output().set_index(fudge);
-    tx.metadata.link = fudge;
-    return tx;
-}
+// transaction random_tx(size_t fudge)
+// {
+//     static const auto settings = system::settings(
+//         system::config::settings::mainnet);
+//     static const chain::block genesis = settings.genesis_block;
+//     auto tx = genesis.transactions()[0];
+//     tx.inputs()[0].previous_output().set_index(fudge);
+//     tx.metadata.link = fudge;
+//     return tx;
+// }
 
-BOOST_AUTO_TEST_SUITE(block_database_tests)
+// BOOST_AUTO_TEST_SUITE(block_database_tests)
 
-BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
-{
-    block_tuple_memory_store memory_store;
-    block_database instance(memory_store);
+// BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
+// {
+//     block_tuple_memory_store memory_store;
+//     block_database instance(memory_store);
 
-    static const auto settings = system::settings(system::config::settings::mainnet);
-    chain::block block0 = settings.genesis_block;
-    block0.set_transactions(
-    {
-       random_tx(0),
-       random_tx(1)
-    });
+//     static const auto settings = system::settings(system::config::settings::mainnet);
+//     chain::block block0 = settings.genesis_block;
+//     block0.set_transactions(
+//     {
+//        random_tx(0),
+//        random_tx(1)
+//     });
 
-    auto from_store = instance.store(block0.header(), 100, 1, 100, 0);
-    BOOST_REQUIRE(from_store->previous_block_hash == block0.header().previous_block_hash());
-    BOOST_REQUIRE(from_store->height == 100);
+//     auto from_store = instance.store(block0.header(), 100, 1, 100, 0);
+//     BOOST_REQUIRE(from_store->previous_block_hash == block0.header().previous_block_hash());
+//     BOOST_REQUIRE(from_store->height == 100);
 
-    auto from_index = instance.get(block0.header().hash());
-    BOOST_REQUIRE_EQUAL(from_index, from_store);
-}
+//     auto from_index = instance.get(block0.header().hash());
+//     BOOST_REQUIRE_EQUAL(from_index, from_store);
+// }
 
-BOOST_AUTO_TEST_SUITE_END()
+// BOOST_AUTO_TEST_SUITE_END()

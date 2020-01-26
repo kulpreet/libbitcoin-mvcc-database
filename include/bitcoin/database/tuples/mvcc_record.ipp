@@ -17,34 +17,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
-#define LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
+#ifndef LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_IPP
+#define LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_IPP
 
 #include <atomic>
-#include <cstddef>
 
-#include <bitcoin/system.hpp>
-#include <bitcoin/database/define.hpp>
-#include <bitcoin/database/storage/memory.hpp>
+#include <bitcoin/database/tuples/mvcc_record.hpp>
 
 namespace libbitcoin {
 namespace database {
 namespace tuples {
 
-using namespace system;
+// Construct the master record for mvcc list
+// Set it so that it is not locked
+// Set begin timestamp is set to passed context's tx id
+// This tuple is not yet "installed"
+template <typename tuple, typename delta_mvcc_record>
+mvcc_record<tuple, delta_mvcc_record>::mvcc_record(
+    const transaction_context &tx_context)
+  : txn_id_(not_locked), data_(tuple()),
+    read_timestamp_(infinity), begin_timestamp_(tx_context.get_timestamp()),
+    end_timestamp_(infinity)
+{
+}
 
-/*
- * Struct to hold old values. We are following the N2O order in our
- * delta table.
- * When writing an update, the older values are copied to delta store
- * and the master tuple is updated in place.
- */
-struct block_tuple_delta {
-    // 1 byte
-    uint8_t state;
-};
-
-typedef std::shared_ptr<block_tuple_delta> block_delta_ptr;
+template <typename tuple, typename delta_mvcc_record>
+delta_mvcc_record mvcc_record<tuple, delta_mvcc_record>::next_version() {
+  return next_;
+}
 
 } // namespace tuples
 } // namespace database

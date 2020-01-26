@@ -46,7 +46,6 @@ using namespace system;
  * TODO: Can we reduce this wasted space?
  */
 struct block_tuple {
-
     // header data, 80 bytes
     // 32 bytes
     hash_digest previous_block_hash;
