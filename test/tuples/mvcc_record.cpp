@@ -19,18 +19,31 @@
 #include <boost/test/unit_test.hpp>
 
 #include <bitcoin/system.hpp>
+#include <bitcoin/database/transaction_management/transaction_manager.hpp>
+#include <bitcoin/database/tuples/block_tuple.hpp>
+#include <bitcoin/database/tuples/block_tuple_delta.hpp>
 #include <bitcoin/database/tuples/mvcc_record.hpp>
 
+using namespace bc;
+using namespace bc::database;
 using namespace bc::database::tuples;
 
+// block tuple wrapped in mvcc record
+using block_mvcc_record = mvcc_record<block_tuple_ptr, block_delta_ptr>;
 
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
 BOOST_AUTO_TEST_CASE(mvcc_record__usage__example__success)
 {
     // start transaction 1
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
 
     // create a block mvcc record using the transaction
+    block_mvcc_record record(context);
+    BOOST_CHECK_EQUAL(record.get_txn_id(), not_locked);
+    BOOST_CHECK_EQUAL(record.get_next(), nullptr);
+
     // commit the transaction
     // test - record mvcc columns, data field and next field
 

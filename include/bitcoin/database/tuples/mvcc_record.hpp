@@ -47,6 +47,31 @@ public:
 
     // get next version
     delta_mvcc_record next_version();
+
+    mvcc_column get_txn_id() {
+        return txn_id_;
+    }
+
+    mvcc_column get_read_timestamp() {
+        return read_timestamp_;
+    }
+
+    mvcc_column get_begin_timestamp() {
+        return begin_timestamp_;
+    }
+
+    mvcc_column get_end_timestamp() {
+        return end_timestamp_;
+    }
+
+    tuple get_data() {
+        return data_;
+    }
+
+    delta_mvcc_record get_next() {
+        return next_;
+    }
+
 private:
     // Compare and swap on txn_id_ "installs" the new version
     // txn_id_ acts as a local latch on this record.

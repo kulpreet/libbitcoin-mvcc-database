@@ -34,10 +34,10 @@ namespace tuples {
 // This tuple is not yet "installed"
 template <typename tuple, typename delta_mvcc_record>
 mvcc_record<tuple, delta_mvcc_record>::mvcc_record(
-    const transaction_context &tx_context)
+    const transaction_context& tx_context)
   : txn_id_(not_locked), data_(tuple()),
     read_timestamp_(infinity), begin_timestamp_(tx_context.get_timestamp()),
-    end_timestamp_(infinity)
+    end_timestamp_(infinity), next_(nullptr)
 {
 }
 
