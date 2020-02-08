@@ -29,7 +29,7 @@ using namespace bc::database;
 using namespace bc::database::tuples;
 
 // block tuple wrapped in mvcc record
-using block_mvcc_record = mvcc_record<block_tuple_ptr, block_delta_ptr>;
+typedef mvcc_record<block_tuple_ptr, block_delta_ptr> block_mvcc_record;
 
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
@@ -38,11 +38,14 @@ BOOST_AUTO_TEST_CASE(mvcc_record__usage__example__success)
     // start transaction 1
     transaction_manager manager;
     auto context = manager.begin_transaction();
+    auto context2 = manager.begin_transaction();
 
     // create a block mvcc record using the transaction
     block_mvcc_record record(context);
-    BOOST_CHECK_EQUAL(record.get_txn_id(), not_locked);
     BOOST_CHECK_EQUAL(record.get_next(), nullptr);
+    BOOST_CHECK(record.get_latch_for_write(context.get_timestamp()));
+    BOOST_CHECK(!record.get_latch_for_write(context2.get_timestamp()));
+    BOOST_CHECK(record.release_latch(context.get_timestamp()));
 
     // commit the transaction
     // test - record mvcc columns, data field and next field

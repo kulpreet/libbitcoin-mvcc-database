@@ -42,8 +42,38 @@ mvcc_record<tuple, delta_mvcc_record>::mvcc_record(
 }
 
 template <typename tuple, typename delta_mvcc_record>
-delta_mvcc_record mvcc_record<tuple, delta_mvcc_record>::next_version() {
+delta_mvcc_record mvcc_record<tuple, delta_mvcc_record>::next_version()
+{
   return next_;
+}
+
+template <typename tuple, typename delta_mvcc_record>
+bool mvcc_record<tuple, delta_mvcc_record>::get_latch_for_write(
+    timestamp_t tid)
+{
+  auto old_tid = txn_id_.load();
+
+  // already locked by tid
+  if (old_tid == tid)
+    return true;
+
+  // try to get the lock
+  auto unlocked = not_locked;
+  return txn_id_.compare_exchange_strong(unlocked, tid);
+}
+
+template <typename tuple, typename delta_mvcc_record>
+bool mvcc_record<tuple, delta_mvcc_record>::release_latch(
+    timestamp_t tid)
+{
+  auto old_tid = txn_id_.load();
+
+  // locked by tid, try to release the latch
+  if (old_tid == tid)
+    return txn_id_.compare_exchange_strong(tid, not_locked);
+
+  // Locked by another txn or already unlocked
+  return false;
 }
 
 } // namespace tuples

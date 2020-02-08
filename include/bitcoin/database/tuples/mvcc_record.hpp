@@ -38,19 +38,23 @@ const uint64_t not_locked = 0;
 // Each record containts MVCC data and a pointed to next
 // version record.
 // tuple will be pointer to block_tuple, utxo_tuple, etc.
-// Both tuple and delta are pointers.
+// Both tuple and delta_mvcc_record are pointers.
 template<typename tuple, typename delta_mvcc_record>
 class mvcc_record {
 public:
     // constructor
     mvcc_record(const transaction_context&);
 
-    // get next version
+    // get next version from version chain
+    // no checks for timestamps are carried out
     delta_mvcc_record next_version();
 
-    mvcc_column get_txn_id() {
-        return txn_id_;
-    }
+    // Get a latch on the record
+    // TODO - do we need to specify memory order?
+    bool get_latch_for_write(timestamp_t tid);
+
+    // release the latch on this record
+    bool release_latch(timestamp_t tid);
 
     mvcc_column get_read_timestamp() {
         return read_timestamp_;
@@ -75,7 +79,7 @@ public:
 private:
     // Compare and swap on txn_id_ "installs" the new version
     // txn_id_ acts as a local latch on this record.
-    std::atomic<mvcc_column> txn_id_;
+    std::atomic<timestamp_t> txn_id_;
 
     // read_timestamp_ tracks the largest timestamp of transactions
     // reading from the record
