@@ -31,50 +31,82 @@ typedef uint64_t mvcc_column;
 // Define infinity to be -1. Might have to change this.
 const uint64_t infinity = -1;
 
-// not_locked used as the sentinel to mark record is not locked
+// not_locked used as the sentinel to mark record is not locked.
 const uint64_t not_locked = 0;
+
+// No one has read this version yet.
+const uint64_t none_read = 0;
 
 // Template for providing MVCC record keeping for tuple
 // Each record containts MVCC data and a pointed to next
 // version record.
 // tuple will be pointer to block_tuple, utxo_tuple, etc.
-// Both tuple and delta_mvcc_record are pointers.
-template<typename tuple, typename delta_mvcc_record>
+// delta is a pointer to the delta data struct
+// reader and writer are functors
+template <typename tuple, typename delta, typename reader = void,
+          typename writer = void>
 class mvcc_record {
 public:
-    // constructor
-    mvcc_record(const transaction_context&);
+    typedef tuple master_data_t;
+    typedef delta delta_data_t;
+    typedef mvcc_record<delta_data_t, delta_data_t> delta_mvcc_record;
+    typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
 
-    // get next version from version chain
-    // no checks for timestamps are carried out
-    delta_mvcc_record next_version();
+    // constructors
+    mvcc_record(const transaction_context&);
+    mvcc_record(const tuple, const transaction_context&);
+
+    // return a tuple with attributes set according to the reader
+    // function. Finds version that is readable by context and sets
+    // the value appropriate in tuple. If can't read any version, then
+    // returns nullptr - the caller should check for this.
+    tuple read_record(const transaction_context&);
+
+    // sets up a new version using the transaction context and the
+    // writer. This will later be installed.
+    //
+    // MVTO: Can only be called by a transaction that already has a
+    // latch on the latest version and the new tid is greater than
+    // readts
+    // latch this record by setting txn_id_ from context
+    // Allocate delta record with:
+    // - tid locked to context timestamp
+    // - begin set to context timestamp
+    // - end ts to infinity
+    // - read ts to 0, no one has read it yet
+    // Does not install the allocated record.
+    delta_mvcc_record_ptr allocate_next(const delta_data_t, const transaction_context&);
+
+    // install this version, return true on success.
+    bool install(const transaction_context&);
+
+    // install the next record from this version, return true on
+    // success.
+    bool install_next_version(delta_mvcc_record_ptr, const transaction_context&);
 
     // Get a latch on the record
     // TODO - do we need to specify memory order?
-    bool get_latch_for_write(timestamp_t tid);
+    bool get_latch_for_write(const transaction_context&);
 
     // release the latch on this record
-    bool release_latch(timestamp_t tid);
+    bool release_latch(const transaction_context&);
 
-    mvcc_column get_read_timestamp() {
-        return read_timestamp_;
-    }
+    mvcc_column get_read_timestamp() { return read_timestamp_; }
 
-    mvcc_column get_begin_timestamp() {
-        return begin_timestamp_;
-    }
+    mvcc_column get_begin_timestamp() { return begin_timestamp_; }
 
-    mvcc_column get_end_timestamp() {
-        return end_timestamp_;
-    }
+    mvcc_column get_end_timestamp() { return end_timestamp_; }
 
-    tuple get_data() {
-        return data_;
-    }
+    tuple get_data() { return data_; }
 
-    delta_mvcc_record get_next() {
-        return next_;
-    }
+    // TODO: Stop using vector
+    typedef std::vector<delta_mvcc_record> version_chain;
+
+    // // iterator definition and operators
+    // typedef typename version_chain::iterator iterator;
+    // typedef typename version_chain::const_iterator const_iterator;
+    // iterator begin() { return versions.begin(); }
+    // iterator end() { return versions.end(); }
 
 private:
     // Compare and swap on txn_id_ "installs" the new version
@@ -93,8 +125,14 @@ private:
     // data is a tuple pointer
     tuple data_;
 
-    // The next record is always delta
-    delta_mvcc_record next_;
+    // next_ points to the next version
+    delta_mvcc_record_ptr next_;
+
+    // returns true if this tuple is visible to transaction
+    bool is_visible(const transaction_context&);
+
+    // returns true if this tuple is latched by context
+    bool is_latched_by(const transaction_context&);
 };
 
 } // namespace tuples

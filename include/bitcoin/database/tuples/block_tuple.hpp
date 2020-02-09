@@ -26,6 +26,7 @@
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
 #include <bitcoin/database/storage/memory.hpp>
+#include <bitcoin/database/tuples/block_tuple_delta.hpp>
 
 namespace libbitcoin {
 namespace database {
@@ -70,6 +71,22 @@ struct block_tuple {
     uint32_t checksum;
     // 1 byte
     uint8_t state;
+};
+
+// read values into target from current
+class block_reader {
+    void operator()(block_tuple& target, const block_tuple_delta& current)
+    {
+        target.state = current.state;
+    }
+};
+
+// write values into current from source
+class block_writer {
+    void operator()(const block_tuple& source, block_tuple_delta& current)
+    {
+        current.state = source.state;
+    }
 };
 
 typedef std::shared_ptr<block_tuple> block_tuple_ptr;

@@ -28,12 +28,17 @@ using namespace bc;
 using namespace bc::database;
 using namespace bc::database::tuples;
 
+// // block delta record wrapped in mvcc record
+// using delta_mvcc_record =
+//     mvcc_record<block_delta_ptr, block_delta_ptr>;
+
 // block tuple wrapped in mvcc record
-typedef mvcc_record<block_tuple_ptr, block_delta_ptr> block_mvcc_record;
+typedef mvcc_record<block_tuple_ptr, block_delta_ptr,
+                    block_reader, block_writer> block_mvcc_record;
 
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
-BOOST_AUTO_TEST_CASE(mvcc_record__usage__example__success)
+BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
 {
     // start transaction 1
     transaction_manager manager;
@@ -42,10 +47,91 @@ BOOST_AUTO_TEST_CASE(mvcc_record__usage__example__success)
 
     // create a block mvcc record using the transaction
     block_mvcc_record record(context);
-    BOOST_CHECK_EQUAL(record.get_next(), nullptr);
-    BOOST_CHECK(record.get_latch_for_write(context.get_timestamp()));
-    BOOST_CHECK(!record.get_latch_for_write(context2.get_timestamp()));
-    BOOST_CHECK(record.release_latch(context.get_timestamp()));
+    //BOOST_CHECK(record.begin() == record.end());
+    BOOST_CHECK(record.get_latch_for_write(context));
+    BOOST_CHECK(!record.get_latch_for_write(context2));
+    BOOST_CHECK(record.release_latch(context));
+}
+
+BOOST_AUTO_TEST_CASE(mvcc_record__install__latched_by_constructor__success)
+{
+    // start transaction 1
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    // create a block mvcc record using the transaction
+    block_mvcc_record record(context);
+    BOOST_CHECK(record.install(context));
+
+    // now can be lached again
+    auto context2 = manager.begin_transaction();
+    BOOST_CHECK(record.get_latch_for_write(context2));
+}
+
+BOOST_AUTO_TEST_CASE(mvcc_record__install__not_latched__failure)
+{
+    // start transaction 1
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    // create a block mvcc record using the transaction
+    block_mvcc_record record(context);
+    record.release_latch(context);
+    BOOST_CHECK(!record.install(context));
+}
+
+BOOST_AUTO_TEST_CASE(mvcc_record__install__latched_by_different_context__failure)
+{
+    // start transaction 1
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+    auto context2 = manager.begin_transaction();
+
+    // create a block mvcc record using the transaction
+    block_mvcc_record record(context);
+    BOOST_CHECK(!record.install(context2));
+}
+
+BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success)
+{
+    // start transaction
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    // create a block mvcc record using the transaction
+    block_mvcc_record record(context);
+    // install it
+    BOOST_REQUIRE(record.install(context));
+
+    // create first delta record
+    block_delta_ptr data = std::make_shared<block_tuple_delta>();
+    data->state = 1;
+    block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(data, context);
+
+    // set end ts, and release latch
+    BOOST_REQUIRE(delta->install(context));
+    // set end ts, and release latch
+    BOOST_REQUIRE(record.install(context));
+}
+
+// BOOST_AUTO_TEST_CASE(mvcc_record__read_versions__single__success)
+// {
+//     // start transaction 1
+//     transaction_manager manager;
+//     auto context = manager.begin_transaction();
+
+//     // create a block mvcc record using the transaction
+//     block_mvcc_record record(context);
+//     BOOST_REQUIRE(!record.install(context));
+
+//     block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
+//     delta_data->state = 1;
+//     auto context2 = manager.begin_transaction();
+//     delta_mvcc_record delta(delta_data, context2);
+// }
+
+    // test iterating over versions chain
+    // HERE
 
     // commit the transaction
     // test - record mvcc columns, data field and next field
@@ -62,6 +148,5 @@ BOOST_AUTO_TEST_CASE(mvcc_record__usage__example__success)
     // fetch mvcc record - would be obtained from index
     // update mvcc record
     // commit the transaction
-}
 
 BOOST_AUTO_TEST_SUITE_END()

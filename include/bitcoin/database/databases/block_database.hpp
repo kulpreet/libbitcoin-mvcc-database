@@ -34,19 +34,24 @@ namespace database {
 
 using namespace bc::database::tuples;
 
+// block delta record wrapped in mvcc record
+using delta_mvcc_record =
+    mvcc_record<block_delta_ptr, block_delta_ptr>;
+
 // block tuple wrapped in mvcc record
-using block_mvcc_record = mvcc_record<block_tuple_ptr, block_delta_ptr>;
+using block_mvcc_record =
+    mvcc_record<block_tuple_ptr, delta_mvcc_record, block_reader, block_writer>;
+
 // memory allocator for block mvcc record
 using block_tuple_memory_store = storage::memory<block_mvcc_record>;
 
-// block delta record wrapped in mvcc record
-using delta_mvcc_record = mvcc_record<block_delta_ptr, block_delta_ptr>;
 // memory allocator for block delta mvcc record
 using block_delta_memory_store = storage::memory<delta_mvcc_record>;
 
 // index for block mvcc record
 using height_index_map = libcuckoo::cuckoohash_map<size_t, block_mvcc_record>;
-using hash_digest_index_map = libcuckoo::cuckoohash_map<system::hash_digest, block_mvcc_record>;
+using hash_digest_index_map =
+    libcuckoo::cuckoohash_map<system::hash_digest, block_mvcc_record>;
 
 /// Stores block_headers each with a list of transaction indexes.
 /// Lookup possible by hash or height.
