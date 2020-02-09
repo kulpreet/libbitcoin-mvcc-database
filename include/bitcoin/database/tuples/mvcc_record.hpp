@@ -21,6 +21,7 @@
 #define LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_HPP
 
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
+#include <bitcoin/database/tuples/delta_iterator.hpp>
 
 namespace libbitcoin {
 namespace database {
@@ -99,14 +100,11 @@ public:
 
     tuple get_data() { return data_; }
 
-    // TODO: Stop using vector
-    typedef std::vector<delta_mvcc_record> version_chain;
+    delta_mvcc_record_ptr get_next() { return next_; }
 
-    // // iterator definition and operators
-    // typedef typename version_chain::iterator iterator;
-    // typedef typename version_chain::const_iterator const_iterator;
-    // iterator begin() { return versions.begin(); }
-    // iterator end() { return versions.end(); }
+    // Iterator definition and operators
+    delta_iterator<delta_mvcc_record_ptr> begin() { return next_; }
+    delta_iterator<delta_mvcc_record_ptr> end() { return nullptr; }
 
 private:
     // Compare and swap on txn_id_ "installs" the new version

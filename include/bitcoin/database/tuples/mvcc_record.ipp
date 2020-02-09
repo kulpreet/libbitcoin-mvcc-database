@@ -91,13 +91,13 @@ tuple mvcc_record<tuple, delta, reader, writer>::read_record(
 
     tuple result{data_};
 
-    // for (auto delta_record = versions.begin(); delta_record != versions.end(); delta_record++) {
-    //     if (delta_record.is_visible(context)) {
-    //         reader(result, delta_record);
-    //     } else {
-    //         return result;
-    //     }
-    // }
+    for (auto delta_record = begin(); delta_record != end(); delta_record++) {
+        if (delta_record.is_visible(context)) {
+            reader(result, delta_record);
+        } else {
+            return result;
+        }
+    }
 
     return result;
 }
@@ -169,10 +169,13 @@ bool mvcc_record<tuple, delta, reader, writer>::install_next_version(
     if (!delta_record.install(context)) {
         return false;
     }
+
     // set end ts for this
     end_timestamp_ = context.get_timestamp();
+
     // set next to point to next delta record
     next_ = delta_record;
+
     // release latch on this
     return release_latch(context);
 }
