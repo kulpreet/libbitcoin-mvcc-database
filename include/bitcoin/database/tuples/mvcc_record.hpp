@@ -20,7 +20,10 @@
 #ifndef LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_HPP
 #define LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_HPP
 
+#include <bitcoin/database/define.hpp>
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
+#include <bitcoin/database/tuples/block_tuple.hpp>
+#include <bitcoin/database/tuples/block_tuple_delta.hpp>
 #include <bitcoin/database/tuples/delta_iterator.hpp>
 
 namespace libbitcoin {
@@ -41,27 +44,28 @@ const uint64_t none_read = 0;
 // Template for providing MVCC record keeping for tuple
 // Each record containts MVCC data and a pointed to next
 // version record.
-// tuple will be pointer to block_tuple, utxo_tuple, etc.
-// delta is a pointer to the delta data struct
-// reader and writer are functors
-template <typename tuple, typename delta, typename reader = void,
-          typename writer = void>
+// tuple is block_tuple, utxo_tuple, etc.
+// delta is the equivalent delta data struct.
+template <typename tuple, typename delta>
 class mvcc_record {
 public:
-    typedef tuple master_data_t;
-    typedef delta delta_data_t;
-    typedef mvcc_record<delta_data_t, delta_data_t> delta_mvcc_record;
-    typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
+    typedef std::shared_ptr<tuple> tuple_ptr;
+    typedef std::shared_ptr<delta> delta_ptr;
+    typedef mvcc_record<delta, delta> delta_mvcc_record;
+    typedef std::shared_ptr<mvcc_record<delta, delta>> delta_mvcc_record_ptr;
+
+    static const delta_mvcc_record_ptr no_next;
+    static const tuple_ptr not_found;
 
     // constructors
-    mvcc_record(const transaction_context&);
-    mvcc_record(const tuple, const transaction_context&);
+    mvcc_record();
+    mvcc_record(const tuple_ptr, const transaction_context&);
 
-    // return a tuple with attributes set according to the reader
-    // function. Finds version that is readable by context and sets
+    // Return a tuple with attributes set from the delta records.
+    // Finds version that is readable by context and sets
     // the value appropriate in tuple. If can't read any version, then
     // returns nullptr - the caller should check for this.
-    tuple read_record(const transaction_context&);
+    tuple_ptr read_record(const transaction_context&);
 
     // sets up a new version using the transaction context and the
     // writer. This will later be installed.
@@ -76,7 +80,7 @@ public:
     // - end ts to infinity
     // - read ts to 0, no one has read it yet
     // Does not install the allocated record.
-    delta_mvcc_record_ptr allocate_next(const delta_data_t, const transaction_context&);
+    delta_mvcc_record_ptr allocate_next(const delta_ptr, const transaction_context&);
 
     // install this version, return true on success.
     bool install(const transaction_context&);
@@ -92,19 +96,21 @@ public:
     // release the latch on this record
     bool release_latch(const transaction_context&);
 
-    mvcc_column get_read_timestamp() { return read_timestamp_; }
+    // returns true if this tuple is visible to transaction
+    bool is_visible(const transaction_context&);
 
-    mvcc_column get_begin_timestamp() { return begin_timestamp_; }
+    mvcc_column get_read_timestamp() const;
 
-    mvcc_column get_end_timestamp() { return end_timestamp_; }
+    mvcc_column get_begin_timestamp() const;
 
-    tuple get_data() { return data_; }
+    mvcc_column get_end_timestamp() const;
 
-    delta_mvcc_record_ptr get_next() { return next_; }
+    tuple_ptr get_data() const;
 
-    // Iterator definition and operators
-    delta_iterator<delta_mvcc_record_ptr> begin() { return next_; }
-    delta_iterator<delta_mvcc_record_ptr> end() { return nullptr; }
+    // // Iterator definition and operators
+    // delta_iterator<delta_mvcc_record_ptr> begin() const;
+
+    // delta_iterator<delta_mvcc_record_ptr> end() const;
 
 private:
     // Compare and swap on txn_id_ "installs" the new version
@@ -121,13 +127,10 @@ private:
     mvcc_column end_timestamp_;
 
     // data is a tuple pointer
-    tuple data_;
+    tuple_ptr data_;
 
     // next_ points to the next version
     delta_mvcc_record_ptr next_;
-
-    // returns true if this tuple is visible to transaction
-    bool is_visible(const transaction_context&);
 
     // returns true if this tuple is latched by context
     bool is_latched_by(const transaction_context&);

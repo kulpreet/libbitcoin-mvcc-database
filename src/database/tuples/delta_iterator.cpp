@@ -62,17 +62,18 @@ typename delta_iterator<delta>::iterator delta_iterator<delta>::operator++(int)
 
 // Simple pointer equality
 template <typename delta>
-bool delta_iterator<delta>::operator==(const delta_iterator &other) const
+bool delta_iterator<delta>::operator==(const delta_iterator& other) const
 {
-  return this == other;
+  return *this == other;
 }
 
 // Simple pointer inequality
 template <typename delta>
-bool delta_iterator<delta>::operator!=(const delta_iterator &other) const
+bool delta_iterator<delta>::operator!=(const delta_iterator& other) const
 {
-  return this != other;
+    return !(*this == other);
 }
+
 
 } // tuples
 } // database

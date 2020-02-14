@@ -46,7 +46,22 @@ using namespace system;
  *
  * TODO: Can we reduce this wasted space?
  */
-struct block_tuple {
+class block_tuple {
+public:
+
+    static const size_t not_found = -1;
+
+    block_tuple();
+
+    operator bool() const;
+
+    void read_from_delta(const block_tuple_delta& delta);
+
+    void write_to_delta(block_tuple_delta& delta) const;
+
+//-------------------------------------------------------------
+// data stored
+
     // header data, 80 bytes
     // 32 bytes
     hash_digest previous_block_hash;
@@ -71,22 +86,6 @@ struct block_tuple {
     uint32_t checksum;
     // 1 byte
     uint8_t state;
-};
-
-// read values into target from current
-class block_reader {
-    void operator()(block_tuple& target, const block_tuple_delta& current)
-    {
-        target.state = current.state;
-    }
-};
-
-// write values into current from source
-class block_writer {
-    void operator()(const block_tuple& source, block_tuple_delta& current)
-    {
-        current.state = source.state;
-    }
 };
 
 typedef std::shared_ptr<block_tuple> block_tuple_ptr;

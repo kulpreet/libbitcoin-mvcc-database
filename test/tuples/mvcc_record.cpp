@@ -32,10 +32,6 @@ using namespace bc::database::tuples;
 // using delta_mvcc_record =
 //     mvcc_record<block_delta_ptr, block_delta_ptr>;
 
-// block tuple wrapped in mvcc record
-typedef mvcc_record<block_tuple_ptr, block_delta_ptr,
-                    block_reader, block_writer> block_mvcc_record;
-
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
 BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
@@ -45,9 +41,11 @@ BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
     auto context = manager.begin_transaction();
     auto context2 = manager.begin_transaction();
 
+    const auto data = std::make_shared<block_tuple>();
+
     // create a block mvcc record using the transaction
-    block_mvcc_record record(context);
-    //BOOST_CHECK(record.begin() == record.end());
+    block_mvcc_record record(data, context);
+    // BOOST_CHECK(record.begin() == record.end());
     BOOST_CHECK(record.get_latch_for_write(context));
     BOOST_CHECK(!record.get_latch_for_write(context2));
     BOOST_CHECK(record.release_latch(context));
@@ -59,8 +57,10 @@ BOOST_AUTO_TEST_CASE(mvcc_record__install__latched_by_constructor__success)
     transaction_manager manager;
     auto context = manager.begin_transaction();
 
+    const auto data = std::make_shared<block_tuple>();
+
     // create a block mvcc record using the transaction
-    block_mvcc_record record(context);
+    block_mvcc_record record(data, context);
     BOOST_CHECK(record.install(context));
 
     // now can be lached again
@@ -74,8 +74,10 @@ BOOST_AUTO_TEST_CASE(mvcc_record__install__not_latched__failure)
     transaction_manager manager;
     auto context = manager.begin_transaction();
 
+    const auto data = std::make_shared<block_tuple>();
+
     // create a block mvcc record using the transaction
-    block_mvcc_record record(context);
+    block_mvcc_record record(data, context);
     record.release_latch(context);
     BOOST_CHECK(!record.install(context));
 }
@@ -87,8 +89,10 @@ BOOST_AUTO_TEST_CASE(mvcc_record__install__latched_by_different_context__failure
     auto context = manager.begin_transaction();
     auto context2 = manager.begin_transaction();
 
+    const auto data = std::make_shared<block_tuple>();
+
     // create a block mvcc record using the transaction
-    block_mvcc_record record(context);
+    block_mvcc_record record(data, context);
     BOOST_CHECK(!record.install(context2));
 }
 
@@ -98,15 +102,17 @@ BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success
     transaction_manager manager;
     auto context = manager.begin_transaction();
 
+    const auto data = std::make_shared<block_tuple>();
+
     // create a block mvcc record using the transaction
-    block_mvcc_record record(context);
+    block_mvcc_record record(data, context);
     // install it
     BOOST_REQUIRE(record.install(context));
 
     // create first delta record
-    block_delta_ptr data = std::make_shared<block_tuple_delta>();
+    block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
     data->state = 1;
-    block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(data, context);
+    block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(delta_data, context);
 
     // set end ts, and release latch
     BOOST_REQUIRE(delta->install(context));
@@ -114,39 +120,32 @@ BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success
     BOOST_REQUIRE(record.install(context));
 }
 
-// BOOST_AUTO_TEST_CASE(mvcc_record__read_versions__single__success)
-// {
-//     // start transaction 1
-//     transaction_manager manager;
-//     auto context = manager.begin_transaction();
+BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
+{
+    // start transaction
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
 
-//     // create a block mvcc record using the transaction
-//     block_mvcc_record record(context);
-//     BOOST_REQUIRE(!record.install(context));
+    const auto data = std::make_shared<block_tuple>();
 
-//     block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
-//     delta_data->state = 1;
-//     auto context2 = manager.begin_transaction();
-//     delta_mvcc_record delta(delta_data, context2);
-// }
+    // create a block mvcc record using the transaction
+    block_mvcc_record record(data, context);
+    // install it
+    BOOST_REQUIRE(record.install(context));
 
-    // test iterating over versions chain
-    // HERE
+    // create first delta record
+    block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
+    data->state = 1;
+    block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(delta_data, context);
 
-    // commit the transaction
-    // test - record mvcc columns, data field and next field
+    // set end ts, and release latch
+    BOOST_REQUIRE(delta->install(context));
+    // set end ts, and release latch
+    BOOST_REQUIRE(record.install(context));
 
-    // start transaction 2
-    // read the mvcc record
-    // test - record mvcc columns, data field and next field reflect
-    // read is in progress
-    // commit the transaction
-    // test - record mvcc columns, data field and next field reflect
-    // read is no longer in progress
-
-    // start transaction 3
-    // fetch mvcc record - would be obtained from index
-    // update mvcc record
-    // commit the transaction
+    // Read the record in a new transaction
+    auto context2 = manager.begin_transaction();
+    auto result = record.read_record(context2);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

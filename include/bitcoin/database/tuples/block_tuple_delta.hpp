@@ -39,9 +39,22 @@ using namespace system;
  * When writing an update, the older values are copied to delta store
  * and the master tuple is updated in place.
  */
-struct block_tuple_delta {
+class block_tuple_delta {
+public:
     // 1 byte
     uint8_t state;
+
+    static const uint8_t not_found_ = -1;
+
+    block_tuple_delta() : state(not_found_){};
+
+    bool operator==(block_tuple_delta& other) {
+        return state == other.state;
+    }
+
+    bool operator!=(block_tuple_delta& other) {
+        return state != other.state;
+    }
 };
 
 typedef std::shared_ptr<block_tuple_delta> block_delta_ptr;

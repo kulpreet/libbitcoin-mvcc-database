@@ -150,6 +150,8 @@ endif()
 add_library( ${CANONICAL_LIB_NAME}
     "./src/database/transaction_management/transaction_manager.cpp"
     "./src/database/tuples/delta_iterator.cpp"
+    "./src/database/tuples/block_tuple.cpp"
+    "./src/database/tuples/delta_iterator.cpp"
     "./src/database/databases/block_database.cpp" )
 
 # ${CANONICAL_LIB_NAME} project specific include directories.
@@ -185,6 +187,7 @@ if (with-tests)
     "./test/databases/block_database.cpp"
     "./test/transaction_management/transaction_manager.cpp"
     "./test/tuples/mvcc_record.cpp"
+    "./src/database/tuples/delta_iterator.cpp"
     "./test/tuples/block_tuple.cpp" )
 
     add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
