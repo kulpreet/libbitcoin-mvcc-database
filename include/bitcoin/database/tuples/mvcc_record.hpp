@@ -52,7 +52,8 @@ public:
     typedef std::shared_ptr<tuple> tuple_ptr;
     typedef std::shared_ptr<delta> delta_ptr;
     typedef mvcc_record<delta, delta> delta_mvcc_record;
-    typedef std::shared_ptr<mvcc_record<delta, delta>> delta_mvcc_record_ptr;
+    typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
+    typedef delta_iterator<delta_mvcc_record_ptr> iterator;
 
     static const delta_mvcc_record_ptr no_next;
     static const tuple_ptr not_found;
@@ -107,10 +108,12 @@ public:
 
     tuple_ptr get_data() const;
 
-    // // Iterator definition and operators
-    // delta_iterator<delta_mvcc_record_ptr> begin() const;
+    const delta_mvcc_record_ptr get_next() const;
 
-    // delta_iterator<delta_mvcc_record_ptr> end() const;
+    // Iterator definition and operators
+    iterator begin() const;
+
+    iterator end() const;
 
 private:
     // Compare and swap on txn_id_ "installs" the new version
@@ -140,6 +143,6 @@ private:
 } // namespace database
 } // namespace libbitcoin
 
-#include <bitcoin/database/tuples/mvcc_record.ipp>
+#include <bitcoin/database/impl/mvcc_record.ipp>
 
 #endif

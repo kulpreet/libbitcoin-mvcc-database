@@ -186,19 +186,26 @@ bool mvcc_record<tuple, delta>::install_next_version(
     return release_latch(context);
 }
 
-// template <typename tuple, typename delta>
-// delta_iterator<typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr>
-// mvcc_record<tuple, delta>::begin() const
-// {
-//     return next_;
-// }
+template <typename tuple, typename delta>
+typename mvcc_record<tuple, delta>::iterator
+mvcc_record<tuple, delta>::begin() const
+{
+    return { next_ };
+}
 
-// template <typename tuple, typename delta>
-// delta_iterator<typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr>
-// mvcc_record<tuple, delta>::end() const
-// {
-//     return no_next;
-// }
+template <typename tuple, typename delta>
+typename mvcc_record<tuple, delta>::iterator
+mvcc_record<tuple, delta>::end() const
+{
+    return { no_next };
+}
+
+template <typename tuple, typename delta>
+const typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr
+mvcc_record<tuple, delta>::get_next() const
+{
+    return next_;
+}
 
 template <typename tuple, typename delta>
 mvcc_column mvcc_record<tuple, delta>::get_read_timestamp() const
@@ -225,13 +232,13 @@ mvcc_record<tuple, delta>::get_data() const
     return data_;
 }
 
-// block tuple wrapped in mvcc record
-template class mvcc_record<block_tuple, block_tuple_delta>;
-typedef mvcc_record<block_tuple, block_tuple_delta> block_mvcc_record;
-
 // block delta tuple
 template class mvcc_record<block_tuple_delta, block_tuple_delta>;
 typedef mvcc_record<block_tuple_delta, block_tuple_delta> block_delta_mvcc_record;
+
+// block tuple wrapped in mvcc record
+template class mvcc_record<block_tuple, block_tuple_delta>;
+typedef mvcc_record<block_tuple, block_tuple_delta> block_mvcc_record;
 
 } // namespace tuples
 } // namespace database

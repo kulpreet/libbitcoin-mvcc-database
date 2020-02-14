@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBBITCOIN_MVCC_DATABASE_VERSIONS_ITERATOR_HPP
-#define LIBBITCOIN_MVCC_DATABASE_VERSIONS_ITERATOR_HPP
+#ifndef LIBBITCOIN_MVCC_DATABASE_DELTA_ITERATOR_HPP
+#define LIBBITCOIN_MVCC_DATABASE_DELTA_ITERATOR_HPP
 
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
 
@@ -66,5 +66,7 @@ private:
 } // namespace tuples
 } // namespace database
 } // namespace libbitcoin
+
+#include <bitcoin/database/impl/delta_iterator.ipp>
 
 #endif

@@ -17,15 +17,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef LIBBITCOIN_MVCC_DATABASE_DELTA_ITERATOR_IPP
+#define LIBBITCOIN_MVCC_DATABASE_DELTA_ITERATOR_IPP
+
 #include <bitcoin/database/tuples/delta_iterator.hpp>
 
 namespace libbitcoin {
 namespace database {
 namespace tuples {
-
-using namespace bc::system;
-using namespace bc::system::chain;
-using namespace bc::database::tuples;
 
 template<typename delta>
 delta_iterator<delta>::delta_iterator(delta record)
@@ -48,7 +47,7 @@ typename delta_iterator<delta>::reference delta_iterator<delta>::operator*() con
 template<typename delta>
 typename delta_iterator<delta>::iterator& delta_iterator<delta>::operator++()
 {
-    delta_record_ = delta_record_.get_next();
+    delta_record_ = delta_record_->get_next();
     return *this;
 }
 
@@ -56,7 +55,7 @@ template <typename delta>
 typename delta_iterator<delta>::iterator delta_iterator<delta>::operator++(int)
 {
   auto it = *this;
-  delta_record_ = delta_record_.get_next();
+  delta_record_ = delta_record_->get_next();
   return it;
 }
 
@@ -64,7 +63,7 @@ typename delta_iterator<delta>::iterator delta_iterator<delta>::operator++(int)
 template <typename delta>
 bool delta_iterator<delta>::operator==(const delta_iterator& other) const
 {
-  return *this == other;
+  return **this == *other;
 }
 
 // Simple pointer inequality
@@ -79,3 +78,4 @@ bool delta_iterator<delta>::operator!=(const delta_iterator& other) const
 } // database
 } // libbiitcoin
 
+#endif

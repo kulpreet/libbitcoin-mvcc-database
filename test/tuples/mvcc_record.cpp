@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
 
     // create a block mvcc record using the transaction
     block_mvcc_record record(data, context);
-    // BOOST_CHECK(record.begin() == record.end());
+    BOOST_CHECK(record.begin() == record.end());
     BOOST_CHECK(record.get_latch_for_write(context));
     BOOST_CHECK(!record.get_latch_for_write(context2));
     BOOST_CHECK(record.release_latch(context));
