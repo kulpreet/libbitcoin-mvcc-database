@@ -97,13 +97,13 @@ mvcc_record<tuple, delta>::read_record(
 
     tuple_ptr result = std::make_shared<tuple>(*data_);
 
-    // for (auto delta_record = begin(); delta_record != end(); delta_record++) {
-    //     if ((*delta_record)->is_visible(context)) {
-    //         result.read_from_delta(*delta_record);
-    //     } else {
-    //         return result;
-    //     }
-    // }
+    for (auto delta_record = begin(); delta_record != end(); delta_record++) {
+        if ((*delta_record)->is_visible(context)) {
+            result->read_from_delta(*delta_record);
+        } else {
+            return result;
+        }
+    }
 
     return result;
 }

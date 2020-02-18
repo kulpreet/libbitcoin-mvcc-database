@@ -120,32 +120,34 @@ BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success
     BOOST_REQUIRE(record.install(context));
 }
 
-BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
-{
-    // start transaction
-    transaction_manager manager;
-    auto context = manager.begin_transaction();
+// This test should be run once transaction commit is handled.
+// BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
+// {
+//     // start transaction
+//     transaction_manager manager;
+//     auto context = manager.begin_transaction();
 
-    const auto data = std::make_shared<block_tuple>();
+//     const auto data = std::make_shared<block_tuple>();
 
-    // create a block mvcc record using the transaction
-    block_mvcc_record record(data, context);
-    // install it
-    BOOST_REQUIRE(record.install(context));
+//     // create a block mvcc record using the transaction
+//     block_mvcc_record record(data, context);
+//     // install it
+//     BOOST_REQUIRE(record.install(context));
 
-    // create first delta record
-    block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
-    data->state = 1;
-    block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(delta_data, context);
+//     // create first delta record
+//     block_delta_ptr delta_data = std::make_shared<block_tuple_delta>();
+//     data->state = 1;
+//     block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(delta_data, context);
 
-    // set end ts, and release latch
-    BOOST_REQUIRE(delta->install(context));
-    // set end ts, and release latch
-    BOOST_REQUIRE(record.install(context));
+//     // set end ts, and release latch
+//     BOOST_REQUIRE(delta->install(context));
+//     // set end ts, and release latch
+//     BOOST_REQUIRE(record.install(context));
 
-    // Read the record in a new transaction
-    auto context2 = manager.begin_transaction();
-    auto result = record.read_record(context2);
-}
+//     // Read the record in a new transaction
+//     auto context2 = manager.begin_transaction();
+//     auto result = record.read_record(context2);
+//     BOOST_REQUIRE(result->state == 1);
+// }
 
 BOOST_AUTO_TEST_SUITE_END()
