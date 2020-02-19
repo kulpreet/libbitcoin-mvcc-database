@@ -48,13 +48,16 @@ public:
 
     block_tuple_delta() : state(not_found_){};
 
-    bool operator==(block_tuple_delta& other) {
+    bool operator==(block_tuple_delta& other)
+    {
         return state == other.state;
     }
 
-    bool operator!=(block_tuple_delta& other) {
+    bool operator!=(block_tuple_delta& other)
+    {
         return state != other.state;
     }
+
 };
 
 typedef std::shared_ptr<block_tuple_delta> block_delta_ptr;

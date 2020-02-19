@@ -33,14 +33,16 @@ block_tuple::operator bool() const
     return height != not_found;
 }
 
-void block_tuple::read_from_delta(const block_tuple_delta& delta)
+void block_tuple::read_from_delta(block_tuple& tuple,
+    block_delta_ptr delta)
 {
-    state = delta.state;
+    tuple.state = delta->state;
 }
 
-void block_tuple::write_to_delta(block_tuple_delta& delta) const
+void block_tuple::write_to_delta(const block_tuple& tuple,
+    block_delta_ptr delta)
 {
-    delta.state = state;
+    delta->state = tuple.state;
 }
 
 } // tuples

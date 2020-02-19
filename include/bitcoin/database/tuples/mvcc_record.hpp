@@ -66,7 +66,7 @@ public:
     // Finds version that is readable by context and sets
     // the value appropriate in tuple. If can't read any version, then
     // returns nullptr - the caller should check for this.
-    tuple_ptr read_record(const transaction_context&);
+    tuple_ptr read_record(const transaction_context&, void (*reader)(tuple, delta_ptr));
 
     // sets up a new version using the transaction context and the
     // writer. This will later be installed.

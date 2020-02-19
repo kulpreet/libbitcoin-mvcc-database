@@ -28,10 +28,6 @@ using namespace bc;
 using namespace bc::database;
 using namespace bc::database::tuples;
 
-// // block delta record wrapped in mvcc record
-// using delta_mvcc_record =
-//     mvcc_record<block_delta_ptr, block_delta_ptr>;
-
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
 BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
