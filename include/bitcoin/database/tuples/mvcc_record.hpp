@@ -86,6 +86,9 @@ public:
     // install this version, return true on success.
     bool install(const transaction_context&);
 
+    // Commit the record by setting the end timestamp to infinity
+    void commit(const transaction_context &);
+
     // install the next record from this version, return true on
     // success.
     bool install_next_version(delta_mvcc_record_ptr, const transaction_context&);

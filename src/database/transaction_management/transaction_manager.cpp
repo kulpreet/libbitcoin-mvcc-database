@@ -43,7 +43,7 @@ transaction_context transaction_manager::begin_transaction()
 
 void transaction_manager::commit_transaction(transaction_context& context) const
 {
-    context.set_state(state::committed);
+    context.commit();
 }
 
 bool transaction_manager::is_active(const transaction_context& context) const

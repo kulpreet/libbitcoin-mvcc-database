@@ -19,6 +19,8 @@
 #ifndef LIBBITCOIN_DATABASE_TRANSACTION_CONTEXT_HPP
 #define LIBBITCOIN_DATABASE_TRANSACTION_CONTEXT_HPP
 
+#include <forward_list>
+
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
 
@@ -35,6 +37,8 @@ enum class state
     committed
 };
 
+typedef std::function<void()> transaction_end_action;
+
 /// transaction_context captures the transaction id, and will need to
 /// capture the state of the transaction as well.
 class BCD_API transaction_context
@@ -42,29 +46,25 @@ class BCD_API transaction_context
 public:
 
     /// Constructor
-    transaction_context(timestamp_t timestamp, state state)
-        : timestamp_(timestamp), state_(state)
-    {
-    }
+    transaction_context(timestamp_t timestamp, state state);
 
-    timestamp_t get_timestamp() const
-    {
-        return timestamp_;
-    }
+    /// Commit a transaction, calling all end transaction functions
+    /// registered
+    bool commit();
 
-    state get_state() const
-    {
-        return state_;
-    }
+    void register_end_action(const transaction_end_action&);
 
-    void set_state(state to)
-    {
-        state_ = to;
-    }
+    timestamp_t get_timestamp() const;
+
+    state get_state() const;
+
+    void set_state(const state to);
 
 private:
     timestamp_t timestamp_;
     state state_;
+
+    std::forward_list<transaction_end_action> end_actions_;
 };
 
 } // namespace database

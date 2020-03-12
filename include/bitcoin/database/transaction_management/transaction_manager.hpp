@@ -21,10 +21,11 @@
 
 #include <unordered_set>
 #include <bitcoin/database/define.hpp>
-#include <bitcoin/database/transaction_management/spinlatch.hpp>
 #include <bitcoin/system.hpp>
 
+#include <bitcoin/database/transaction_management/spinlatch.hpp>
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
+#include <bitcoin/database/tuples/mvcc_record.hpp>
 
 typedef uint64_t timestamp_t;
 
