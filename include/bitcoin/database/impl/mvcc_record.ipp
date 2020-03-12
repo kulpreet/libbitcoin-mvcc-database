@@ -89,7 +89,7 @@ bool mvcc_record<tuple, delta>::release_latch(
 template <typename tuple, typename delta>
 typename mvcc_record<tuple, delta>::tuple_ptr
 mvcc_record<tuple, delta>::read_record(
-    const transaction_context &context, void (*reader)(tuple, delta_ptr))
+    const transaction_context &context, void (*reader)(tuple&, delta_ptr))
 {
     if (!is_visible(context)) {
         return not_found;
