@@ -186,7 +186,9 @@ if (with-tests)
     "./test/databases/block_database.cpp"
     "./test/transaction_management/transaction_manager.cpp"
     "./test/tuples/mvcc_record.cpp"
-    "./test/tuples/block_tuple.cpp" )
+    "./test/tuples/block_tuple.cpp"
+    "./test/storage/object_pool.cpp"
+    )
 
   add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
             --run_test=*

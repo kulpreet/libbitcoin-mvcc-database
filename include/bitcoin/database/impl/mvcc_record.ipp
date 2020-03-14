@@ -262,8 +262,8 @@ typedef mvcc_record<block_tuple_delta, block_tuple_delta> block_delta_mvcc_recor
 template class mvcc_record<block_tuple, block_tuple_delta>;
 typedef mvcc_record<block_tuple, block_tuple_delta> block_mvcc_record;
 
+} // database
+} // libbitcoin
 } // namespace tuples
-} // namespace database
-} // namespace libbitcoin
 
 #endif
