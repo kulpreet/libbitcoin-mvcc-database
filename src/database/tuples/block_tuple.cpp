@@ -34,15 +34,15 @@ block_tuple::operator bool() const
 }
 
 void block_tuple::read_from_delta(block_tuple& tuple,
-    block_delta_ptr delta)
+    block_tuple_delta& delta)
 {
-    tuple.state = delta->state;
+    tuple.state = delta.state;
 }
 
 void block_tuple::write_to_delta(const block_tuple& tuple,
-    block_delta_ptr delta)
+    block_tuple_delta& delta)
 {
-    delta->state = tuple.state;
+    delta.state = tuple.state;
 }
 
 } // tuples

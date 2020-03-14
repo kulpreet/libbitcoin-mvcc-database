@@ -55,9 +55,9 @@ public:
 
     operator bool() const;
 
-    static void read_from_delta(block_tuple&, block_delta_ptr);
+    static void read_from_delta(block_tuple&, block_tuple_delta&);
 
-    static void write_to_delta(const block_tuple&, block_delta_ptr);
+    static void write_to_delta(const block_tuple&, block_tuple_delta&);
 
 //-------------------------------------------------------------
 // data stored

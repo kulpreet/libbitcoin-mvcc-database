@@ -59,14 +59,14 @@ public:
     static const tuple_ptr not_found;
 
     // constructors
-    mvcc_record();
-    mvcc_record(const tuple_ptr, const transaction_context&);
+    mvcc_record() = default;
+    mvcc_record(const transaction_context&);
 
     // Return a tuple with attributes set from the delta records.
     // Finds version that is readable by context and sets
     // the value appropriate in tuple. If can't read any version, then
     // returns nullptr - the caller should check for this.
-    tuple_ptr read_record(const transaction_context&, void (*reader)(tuple&, delta_ptr));
+    tuple_ptr read_record(const transaction_context&, void (*reader)(tuple&, delta&));
 
     // sets up a new version using the transaction context and the
     // writer. This will later be installed.
@@ -81,17 +81,21 @@ public:
     // - end ts to infinity
     // - read ts to 0, no one has read it yet
     // Does not install the allocated record.
-    delta_mvcc_record_ptr allocate_next(const delta_ptr, const transaction_context&);
+    delta_mvcc_record_ptr allocate_next(const transaction_context&);
 
     // install this version, return true on success.
     bool install(const transaction_context&);
 
-    // Commit the record by setting the end timestamp to infinity
-    void commit(const transaction_context &);
-
     // install the next record from this version, return true on
-    // success.
-    bool install_next_version(delta_mvcc_record_ptr, const transaction_context&);
+    // success. The new version or this are not committed, i.e. the
+    // latches are still acquired by current txn.
+    void install_next_version(delta_mvcc_record_ptr, const transaction_context&);
+
+    // commit releases latch and sets timestamp
+    bool commit(const transaction_context&, const timestamp_t);
+
+    // commit releases latch and sets timestamp to context's ts
+    bool commit(const transaction_context&);
 
     // Get a latch on the record
     // TODO - do we need to specify memory order?
@@ -103,13 +107,19 @@ public:
     // returns true if this tuple is visible to transaction
     bool is_visible(const transaction_context&);
 
+    // returns true if this tuple can be read by this transaction
+    // check for visibility is separate
+    bool can_read(const transaction_context&);
+
     mvcc_column get_read_timestamp() const;
+
+    void set_read_timestamp(const transaction_context&);
 
     mvcc_column get_begin_timestamp() const;
 
     mvcc_column get_end_timestamp() const;
 
-    tuple_ptr get_data() const;
+    tuple& get_data();
 
     const delta_mvcc_record_ptr get_next() const;
 
@@ -132,8 +142,8 @@ private:
     mvcc_column begin_timestamp_;
     mvcc_column end_timestamp_;
 
-    // data is a tuple pointer
-    tuple_ptr data_;
+    // data is the tuple being wrapped in mvcc
+    tuple data_;
 
     // next_ points to the next version
     delta_mvcc_record_ptr next_;

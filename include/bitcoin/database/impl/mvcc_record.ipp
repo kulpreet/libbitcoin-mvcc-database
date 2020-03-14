@@ -36,22 +36,16 @@ template <typename tuple, typename delta>
 const typename mvcc_record<tuple, delta>::tuple_ptr
 mvcc_record<tuple, delta>::not_found = std::make_shared<tuple>();
 
-template <typename tuple, typename delta>
-mvcc_record<tuple, delta>::mvcc_record()
-  : data_(std::make_shared<tuple>())
-{
-}
-
 // Construct the master record for mvcc list.
 // Set it so that it is locked by creating tx context.
 // Set begin timestamp is set to passed context's tx id
 // This tuple is not yet "installed".
 template <typename tuple, typename delta>
 mvcc_record<tuple, delta>::mvcc_record(
-    const tuple_ptr data, const transaction_context& tx_context)
-  : txn_id_(tx_context.get_timestamp()), data_(data),
-    read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
-    end_timestamp_(infinity), next_(no_next)
+    const transaction_context& tx_context)
+    : txn_id_(tx_context.get_timestamp()),
+      read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
+      end_timestamp_(infinity), data_(tuple()), next_(no_next)
 {
 }
 
@@ -89,23 +83,33 @@ bool mvcc_record<tuple, delta>::release_latch(
 template <typename tuple, typename delta>
 typename mvcc_record<tuple, delta>::tuple_ptr
 mvcc_record<tuple, delta>::read_record(
-    const transaction_context &context, void (*reader)(tuple&, delta_ptr))
+    const transaction_context &context, void (*reader)(tuple&, delta&))
 {
     if (!is_visible(context)) {
         return not_found;
     }
 
-    tuple_ptr result = std::make_shared<tuple>(*data_);
+    tuple_ptr result = std::make_shared<tuple>(data_);
+    set_read_timestamp(context);
 
     for (auto delta_record = begin(); delta_record != end(); delta_record++) {
-        if ((*delta_record)->is_visible(context)) {
+        if ((*delta_record)->can_read(context)) {
             reader(*result, delta_record->get_data());
+            delta_record->set_read_timestamp(context);
         } else {
             return result;
         }
     }
 
     return result;
+}
+
+// Uses MVTO protocol
+template <typename tuple, typename delta>
+bool mvcc_record<tuple, delta>::can_read(
+    const transaction_context &context)
+{
+    return read_timestamp_ <= context.get_timestamp();
 }
 
 // Uses MVTO protocol
@@ -121,8 +125,8 @@ bool mvcc_record<tuple, delta>::is_visible(
         return false;
     }
 
-    // context.timestamp is between begin and end ts
-    if (timestamp < begin_timestamp_ || timestamp > end_timestamp_) {
+    // context.timestamp is greater than begin ts
+    if (timestamp < begin_timestamp_) {
         return false;
     }
 
@@ -139,11 +143,11 @@ bool mvcc_record<tuple, delta>::is_latched_by(
 template <typename tuple, typename delta>
 typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr
 mvcc_record<tuple, delta>::allocate_next(
-    const delta_ptr data, const transaction_context& context)
+    const transaction_context& context)
 {
     // MVTO: latch this record before creating the next version
     get_latch_for_write(context);
-    return std::make_shared<delta_mvcc_record>(data, context);
+    return std::make_shared<delta_mvcc_record>(context);
 }
 
 template <typename tuple, typename delta>
@@ -162,18 +166,34 @@ bool mvcc_record<tuple, delta>::install(
 
     // set end ts
     end_timestamp_ = timestamp;
-
-    // release latch
-    return txn_id_.compare_exchange_strong(timestamp, not_locked);
+    return true;
 }
 
 template <typename tuple, typename delta>
-bool mvcc_record<tuple, delta>::install_next_version(
+bool mvcc_record<tuple, delta>::commit(
+    const transaction_context &context)
+{
+    return commit(context, infinity);
+}
+
+template <typename tuple, typename delta>
+bool mvcc_record<tuple, delta>::commit(
+    const transaction_context &context, const timestamp_t ts)
+{
+    BITCOIN_ASSERT_MSG(!is_latched_by(context),
+        "Trying to install a version without latching it first");
+
+    end_timestamp_ = ts;
+    return release_latch(context);
+}
+
+template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record_ptr delta_record, const transaction_context& context)
 {
     // install delta
     if (!delta_record->install(context)) {
-        return false;
+        return;
     }
 
     // set end ts for this
@@ -181,9 +201,6 @@ bool mvcc_record<tuple, delta>::install_next_version(
 
     // set next to point to next delta record
     next_ = delta_record;
-
-    // release latch on this
-    return release_latch(context);
 }
 
 template <typename tuple, typename delta>
@@ -214,6 +231,12 @@ mvcc_column mvcc_record<tuple, delta>::get_read_timestamp() const
 }
 
 template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::set_read_timestamp(const transaction_context& context)
+{
+    read_timestamp_ = context.get_timestamp();
+}
+
+template <typename tuple, typename delta>
 mvcc_column mvcc_record<tuple, delta>::get_begin_timestamp() const
 {
     return begin_timestamp_;
@@ -226,8 +249,7 @@ mvcc_column mvcc_record<tuple, delta>::get_end_timestamp() const
 }
 
 template <typename tuple, typename delta>
-typename mvcc_record<tuple, delta>::tuple_ptr
-mvcc_record<tuple, delta>::get_data() const
+tuple& mvcc_record<tuple, delta>::get_data()
 {
     return data_;
 }

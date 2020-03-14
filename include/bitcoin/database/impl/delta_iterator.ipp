@@ -59,14 +59,13 @@ typename delta_iterator<delta>::iterator delta_iterator<delta>::operator++(int)
   return it;
 }
 
-// Simple pointer equality
+// Only used to check end() and therefore checks state to match not_found_
 template <typename delta>
 bool delta_iterator<delta>::operator==(const delta_iterator& other) const
 {
-  return **this == *other;
+    return (**this)->get_data().state == (*other)->get_data().state;
 }
 
-// Simple pointer inequality
 template <typename delta>
 bool delta_iterator<delta>::operator!=(const delta_iterator& other) const
 {
