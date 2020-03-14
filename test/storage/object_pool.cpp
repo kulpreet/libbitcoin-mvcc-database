@@ -50,39 +50,39 @@ BOOST_AUTO_TEST_CASE(object_pool__simple_test__reuse____success)
   }
 }
 
-// // Reset the size of the object pool
-// // NOLINTNEXTLINE
-// TEST(ObjectPoolTests, ResetLimitTest) {
-//   const uint32_t repeat = 10;
-//   const uint64_t size_limit = 10;
-//   for (uint32_t iteration = 0; iteration < repeat; ++iteration) {
-//     common::ObjectPool<uint32_t> tested(size_limit, size_limit);
-//     std::unordered_set<uint32_t *> used_ptrs;
+// Reset the size of the object pool
+BOOST_AUTO_TEST_CASE(object_pool__reset_limit______success)
+{
+  const uint32_t repeat = 10;
+  const uint64_t size_limit = 10;
+  for (uint32_t iteration = 0; iteration < repeat; ++iteration) {
+    object_pool<uint32_t> tested(size_limit, size_limit);
+    std::unordered_set<uint32_t *> used_ptrs;
 
-//     // The reuse_queue should have a size of size_limit
-//     for (uint32_t i = 0; i < size_limit; ++i) used_ptrs.insert(tested.Get());
-//     for (auto &it : used_ptrs) tested.Release(it);
+    // The reuse_queue should have a size of size_limit
+    for (uint32_t i = 0; i < size_limit; ++i) used_ptrs.insert(tested.get());
+    for (auto &it : used_ptrs) tested.release(it);
 
-//     tested.SetReuseLimit(size_limit / 2);
-//     EXPECT_TRUE(tested.SetSizeLimit(size_limit / 2));
+    tested.set_reuse_limit(size_limit / 2);
+    BOOST_CHECK(tested.set_size_limit(size_limit / 2));
 
-//     std::vector<uint32_t *> ptrs;
-//     for (uint32_t i = 0; i < size_limit / 2; ++i) {
-//       // the first half should be reused pointers
-//       uint32_t *ptr = tested.Get();
-//       EXPECT_FALSE(used_ptrs.find(ptr) == used_ptrs.end());
+    std::vector<uint32_t *> ptrs;
+    for (uint32_t i = 0; i < size_limit / 2; ++i) {
+      // the first half should be reused pointers
+      uint32_t *ptr = tested.get();
+    BOOST_CHECK(used_ptrs.find(ptr) != used_ptrs.end());
 
-//       // store the pointer to free later
-//       ptrs.emplace_back(ptr);
-//     }
+      // store the pointer to free later
+      ptrs.emplace_back(ptr);
+    }
 
-//     // I should get an exception
-//     EXPECT_THROW(tested.Get(), common::NoMoreObjectException);
+    // Should get an exception
+    BOOST_CHECK_THROW(tested.get(), no_more_object_exception);
 
-//     // free memory
-//     for (auto &it : ptrs) tested.Release(it);
-//   }
-// }
+    // free memory
+    for (auto &it : ptrs) tested.release(it);
+  }
+}
 
 // class ObjectPoolTestType {
 //  public:
