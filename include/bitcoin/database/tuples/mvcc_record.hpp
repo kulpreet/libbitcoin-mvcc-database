@@ -20,6 +20,8 @@
 #ifndef LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_HPP
 #define LIBBITCOIN_MVCC_DATABASE_MVCC_RECORD_HPP
 
+#include <atomic>
+
 #include <bitcoin/database/define.hpp>
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>

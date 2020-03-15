@@ -20,6 +20,7 @@
 #ifndef LIBBITCOIN_MVCC_RAW_BLOCK_HPP
 #define LIBBITCOIN_MVCC_RAW_BLOCK_HPP
 
+#include <atomic>
 #include <bitcoin/system.hpp>
 
 namespace libbitcoin {
@@ -51,17 +52,63 @@ private:
 
 public:
   /**
-   * Contents of the raw block, a byte array.
+   * Contents of the raw block, an array of bytes.
+   * unint32_t reserved for insert_head_
    */
-  system::byte_array<BLOCK_SIZE - sizeof(uint32_t)> content_;
+  uint8_t content_[BLOCK_SIZE - sizeof(uint32_t)];
 
   /**
    * Get the offset of this block. Because the first bit insert_head_ is used to indicate the status
    * of the block, we need to clear the status bit to get the real offset
    * @return the offset which tells us where the next insertion should take place
    */
-  uint32_t get_insert_head() { return INT32_MAX & insert_head_.load(); }
+  uint32_t get_insert_head() {
+      return MAX_INT32 & insert_head_.load();
+  }
 
+  /**
+   * Compare and swap block status to busy. Expect that block to be idle, if yes, set the block status to be busy
+   * @param block the block to compare and set
+   * @return true if the set operation succeeded, false if the block is already busy
+   */
+  bool set_busy_status()
+  {
+      uint32_t old_val = clear_bit(insert_head_.load());
+      return insert_head_.compare_exchange_strong(old_val, set_bit(old_val));
+  }
+
+  /**
+   * Compare and swap block status to idle. Expect that block to be busy, if yes, set the block status to be idle
+   * @param block the block to compare and set
+   * @return true if the set operation succeeded, false if the block is already idle
+   */
+  bool clear_busy_status() {
+      uint32_t val = insert_head_.load();
+      if (val != set_bit(val)) {
+          return false;
+      }
+      return insert_head_.compare_exchange_strong(val, clear_bit(val));
+  }
+
+  /**
+   * Set the first bit of given val to 0, helper function used by ClearBlockBusyStatus
+   * @param val the value to be set
+   * @return the changed value with first bit set to 0
+   */
+  static uint32_t clear_bit(uint32_t val)
+  {
+      return val & MAX_INT32;
+  }
+
+  /**
+   * Set the first bit of given val to 1, helper function used by SetBlockBusyStatus
+   * @param val val the value to be set
+   * @return the changed value with first bit set to 1
+   */
+  static uint32_t set_bit(uint32_t val)
+  {
+      return val | MIN_INT32;
+  }
 };
 
 /**

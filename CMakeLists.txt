@@ -188,6 +188,7 @@ if (with-tests)
     "./test/tuples/mvcc_record.cpp"
     "./test/tuples/block_tuple.cpp"
     "./test/storage/object_pool.cpp"
+    "./test/storage/raw_block.cpp"
     )
 
   add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
