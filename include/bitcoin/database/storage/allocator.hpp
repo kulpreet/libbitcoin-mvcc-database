@@ -72,23 +72,29 @@ class byte_aligned_allocator {
    * Allocates a new byte array sized to hold a T.
    * @return a pointer to the byte array allocated.
    */
-  T *allocate() {
-    auto *result = reinterpret_cast<T *>(allocation_util::allocate_aligned(sizeof(T)));
-    reuse(result);
-    return result;
-  }
+  T *allocate()
+    {
+        auto *result = reinterpret_cast<T *>(allocation_util::allocate_aligned(sizeof(T)));
+        reuse(result);
+        return result;
+    }
 
   /**
    * Reuse a reused chunk of memory to be handed out again
    * @param reused memory location, possibly filled with junk bytes
    */
-  void reuse(T *const reused) {}
+  void reuse(T *const reused)
+    {
+    }
 
   /**
    * Deletes the byte array.
    * @param ptr pointer to the byte array to be deleted.
    */
-  void deallocate(T *const ptr) { delete[] reinterpret_cast<uint8_t *>(ptr); }  // NOLINT
+  void deallocate(T *const ptr)
+    {
+        delete[] reinterpret_cast<uint8_t *>(ptr);
+    }
 };
 
 } // namespace storage

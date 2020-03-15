@@ -26,6 +26,7 @@
 
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/storage/allocator.hpp>
+#include <bitcoin/database/storage/raw_block.hpp>
 #include <bitcoin/database/transaction_management/spinlatch.hpp>
 
 namespace libbitcoin {
@@ -235,6 +236,13 @@ private:
 
     uint64_t current_size_;
 };
+
+/**
+ * A block store is essentially an object pool. However, all blocks should be
+ * aligned, so we will need to use the default constructor instead of raw
+ * malloc.
+ */
+typedef object_pool<raw_block, block_allocator> block_store;
 
 } // namespace storage
 } // namespace database
