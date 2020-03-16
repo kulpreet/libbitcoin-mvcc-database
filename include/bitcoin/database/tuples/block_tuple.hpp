@@ -25,7 +25,6 @@
 
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
-#include <bitcoin/database/storage/memory.hpp>
 #include <bitcoin/database/tuples/block_tuple_delta.hpp>
 
 namespace libbitcoin {

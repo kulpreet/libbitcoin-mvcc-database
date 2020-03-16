@@ -17,52 +17,52 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
-#define LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_DELTA_HPP
+#ifndef LIBBITCOIN_MVCC_STORAGE_HPP
+#define LIBBITCOIN_MVCC_STORAGE_HPP
 
 #include <atomic>
-#include <cstddef>
-
 #include <bitcoin/system.hpp>
-#include <bitcoin/database/define.hpp>
+
+#include <bitcoin/database/storage/raw_block.hpp>
+#include <bitcoin/database/storage/object_pool.hpp>
+#include <bitcoin/database/storage/slot.hpp>
+#include <bitcoin/database/storage/slot_iterator.hpp>
 
 namespace libbitcoin {
 namespace database {
-namespace tuples {
+namespace storage {
 
-using namespace system;
-
-/*
- * Struct to hold old values. We are following the N2O order in our
- * delta table.
- * When writing an update, the older values are copied to delta store
- * and the master tuple is updated in place.
- */
-class block_tuple_delta {
+template <typename T>
+class store
+{
 public:
-    // 1 byte
-    uint8_t state;
+    /**
+     * Constructs a new storage for the give type T, using the given
+     * block_stre as the source of its storage blocks.
+     *
+     * @param store the block store to use.
+     */
+    store(const block_store_ptr store);
 
-    static const uint8_t not_found_ = -1;
+    /**
+     * Destructs store, frees all its blocks and any potential varlen
+     * entries.
+     */
+    ~store();
 
-    block_tuple_delta() : state(not_found_){};
+private:
 
-    bool operator==(block_tuple_delta& other)
-    {
-        return state == other.state;
-    }
+    raw_block* get_new_block();
 
-    bool operator!=(block_tuple_delta& other)
-    {
-        return state != other.state;
-    }
-
+    block_store_ptr block_store_;
+    std::list<raw_block*> blocks_;
+    std::list<raw_block*>::iterator insertion_head_;
 };
 
-typedef std::shared_ptr<block_tuple_delta> block_delta_ptr;
-
-} // namespace tuples
+} // namespace storage
 } // namespace database
 } // namespace libbitcoin
+
+#include <bitcoin/database/impl/storage.ipp>
 
 #endif

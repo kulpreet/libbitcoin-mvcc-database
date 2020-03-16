@@ -17,23 +17,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBBITCOIN_MVCC_MEMORY_IPP
-#define LIBBITCOIN_MVCC_MEMORY_IPP
+#ifndef LIBBITCOIN_MVCC_DATABASE_MVCC_STORAGE_IPP
+#define LIBBITCOIN_MVCC_DATABASE_MVCC_STORAGE_IPP
 
-#include <bitcoin/database/storage/memory.hpp>
+#include <bitcoin/database/storage/storage.hpp>
 
 namespace libbitcoin {
 namespace database {
 namespace storage {
 
-template<typename T>
-typename memory<T>::memory_ptr memory<T>::allocate()
+template <typename T>
+store<T>::store(const block_store_ptr store)
+    : block_store_(store)
 {
-    return std::make_shared<T>();
+  if (block_store_ != nullptr) {
+    raw_block* new_block = get_new_block();
+    // insert block
+    blocks_.push_back(new_block);
+  }
+  insertion_head_ = blocks_.begin();
 }
 
+template <typename T>
+raw_block* store<T>::get_new_block()
+{
+    raw_block* new_block = block_store_->get();
+    // accessor_.InitializeRawBlock(this, new_block, layout_version_);
+    // data_table_counter_.IncrementNumNewBlock(1);
+    return new_block;
 }
-}
-}
+
+} // storage
+} // database
+} // libbitcoin
 
 #endif

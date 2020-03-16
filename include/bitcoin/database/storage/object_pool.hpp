@@ -243,6 +243,7 @@ private:
  * malloc.
  */
 typedef object_pool<raw_block, block_allocator> block_store;
+typedef std::shared_ptr<block_store> block_store_ptr;
 
 } // namespace storage
 } // namespace database
