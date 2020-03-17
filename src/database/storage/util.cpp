@@ -34,7 +34,7 @@ uint32_t util::pad_upto_size(const uint8_t word_size, const uint32_t offset) {
   return (offset + mask) & (~mask);
 }
 
-uint8_t *aligned_ptr(const uint8_t size, const void *ptr)
+uint8_t* util::aligned_ptr(const uint8_t size, const void *ptr)
 {
     BITCOIN_ASSERT_MSG((size & (size - 1)) == 0,
         "word_size should be a power of two.");

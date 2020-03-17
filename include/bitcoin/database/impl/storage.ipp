@@ -28,23 +28,32 @@ namespace database {
 namespace storage {
 
 template <typename T>
-store<T>::store(const block_store_ptr store)
-    : block_store_(store)
+store<T>::store(const block_pool_ptr pool)
+    : block_pool_(pool)
 {
-  if (block_store_ != nullptr) {
-    raw_block* new_block = get_new_block();
-    tuple_size_ = sizeof(T);
-    num_slots_ = BLOCK_SIZE / tuple_size_;
-    // insert block
-    blocks_.push_back(new_block);
-  }
-  insertion_head_ = blocks_.begin();
+    blocks_latch_ = std::make_shared<spinlatch>();
+    if (block_pool_ != nullptr) {
+        raw_block* new_block = get_new_block();
+        tuple_size_ = sizeof(T);
+        num_slots_ = BLOCK_SIZE / tuple_size_;
+        // insert block
+        blocks_.push_back(new_block);
+    }
+    insertion_head_ = blocks_.begin();
+}
+
+template <typename T>
+store<T>::~store()
+{
+    scopedspinlatch guard(blocks_latch_);
+    for (raw_block *block : blocks_)
+        block_pool_->release(block);
 }
 
 template <typename T>
 raw_block* store<T>::get_new_block()
 {
-    raw_block* new_block = block_store_->get();
+    raw_block* new_block = block_pool_->get();
     initialize_raw_block(new_block);
     return new_block;
 }

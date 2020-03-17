@@ -29,7 +29,9 @@ BOOST_AUTO_TEST_CASE(storage__constructor____success)
 {
   const uint64_t size_limit = 1;
   const uint64_t reuse_limit = 1;
-  block_store instance(size_limit, reuse_limit);
+  const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+
+  store<int64_t> instance{block_store};
 }
 
 BOOST_AUTO_TEST_SUITE_END()

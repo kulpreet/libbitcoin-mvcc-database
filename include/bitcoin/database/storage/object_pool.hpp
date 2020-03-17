@@ -242,8 +242,8 @@ private:
  * aligned, so we will need to use the default constructor instead of raw
  * malloc.
  */
-typedef object_pool<raw_block, block_allocator> block_store;
-typedef std::shared_ptr<block_store> block_store_ptr;
+typedef object_pool<raw_block, block_allocator> block_pool;
+typedef std::shared_ptr<block_pool> block_pool_ptr;
 
 } // namespace storage
 } // namespace database

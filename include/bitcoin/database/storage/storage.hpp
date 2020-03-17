@@ -23,6 +23,7 @@
 #include <atomic>
 #include <bitcoin/system.hpp>
 
+#include <bitcoin/database/transaction_management/spinlatch.hpp>
 #include <bitcoin/database/storage/raw_block.hpp>
 #include <bitcoin/database/storage/object_pool.hpp>
 #include <bitcoin/database/storage/slot.hpp>
@@ -45,11 +46,10 @@ public:
      *
      * @param store the block store to use.
      */
-    store(const block_store_ptr store);
+    store(const block_pool_ptr store);
 
     /**
-     * Destructs store, frees all its blocks and any potential varlen
-     * entries.
+     * Destructs store, releases all its blocks to block pool
      */
     ~store();
 
@@ -63,8 +63,11 @@ private:
 
     raw_block* get_new_block();
 
-    block_store_ptr block_store_;
+    block_pool_ptr block_pool_;
+
     std::list<raw_block*> blocks_;
+    std::shared_ptr<spinlatch> blocks_latch_;
+
     std::list<raw_block*>::iterator insertion_head_;
 
     uint32_t tuple_size_;
