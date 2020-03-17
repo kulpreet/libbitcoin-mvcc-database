@@ -27,10 +27,13 @@
 #include <bitcoin/database/storage/object_pool.hpp>
 #include <bitcoin/database/storage/slot.hpp>
 #include <bitcoin/database/storage/slot_iterator.hpp>
+#include <bitcoin/database/container/concurrent_bitmap.hpp>
 
 namespace libbitcoin {
 namespace database {
 namespace storage {
+
+using namespace container;
 
 template <typename T>
 class store
@@ -50,6 +53,12 @@ public:
      */
     ~store();
 
+    // Initialize a raw block
+    void initialize_raw_block(raw_block*);
+
+    // Read the slot bitmap from the raw block contents
+    raw_concurrent_bitmap* get_slot_bitmap(raw_block*);
+
 private:
 
     raw_block* get_new_block();
@@ -57,6 +66,9 @@ private:
     block_store_ptr block_store_;
     std::list<raw_block*> blocks_;
     std::list<raw_block*>::iterator insertion_head_;
+
+    uint32_t tuple_size_;
+    uint32_t num_slots_;
 };
 
 } // namespace storage

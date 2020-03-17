@@ -224,8 +224,9 @@ public:
 
     /**
      * Clears the bitmap by setting bits to 0.
-     * @param num_bits number of bits to clear. This should be equal to the number of elements of the entire bitmap or
-     * unintended elements may be cleared
+     * @param num_bits number of bits to clear. This should be equal
+     * to the number of elements of the entire bitmap or unintended
+     * elements may be cleared
      * @warning this is not thread safe!
      */
     void unsafe_clear(const uint32_t num_bits) {

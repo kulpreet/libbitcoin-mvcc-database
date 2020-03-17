@@ -34,7 +34,7 @@ const auto BLOCK_SIZE = 1 << 20;
 
 class alignas(BLOCK_SIZE) raw_block
 {
-private:
+public:
   /**
    * The insert head tells us where the next insertion will take
    * place.
@@ -50,7 +50,6 @@ private:
    */
   std::atomic<uint32_t> insert_head_;
 
-public:
   /**
    * Contents of the raw block, an array of bytes.
    * unint32_t reserved for insert_head_

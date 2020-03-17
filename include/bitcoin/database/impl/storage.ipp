@@ -21,6 +21,7 @@
 #define LIBBITCOIN_MVCC_DATABASE_MVCC_STORAGE_IPP
 
 #include <bitcoin/database/storage/storage.hpp>
+#include <bitcoin/database/storage/util.hpp>
 
 namespace libbitcoin {
 namespace database {
@@ -32,6 +33,8 @@ store<T>::store(const block_store_ptr store)
 {
   if (block_store_ != nullptr) {
     raw_block* new_block = get_new_block();
+    tuple_size_ = sizeof(T);
+    num_slots_ = BLOCK_SIZE / tuple_size_;
     // insert block
     blocks_.push_back(new_block);
   }
@@ -42,9 +45,23 @@ template <typename T>
 raw_block* store<T>::get_new_block()
 {
     raw_block* new_block = block_store_->get();
-    // accessor_.InitializeRawBlock(this, new_block, layout_version_);
-    // data_table_counter_.IncrementNumNewBlock(1);
+    initialize_raw_block(new_block);
     return new_block;
+}
+
+template <typename T>
+void store<T>::initialize_raw_block(raw_block* block)
+{
+    block->insert_head_ = 0;
+    get_slot_bitmap(block)->unsafe_clear(num_slots_);
+}
+
+template <typename T>
+raw_concurrent_bitmap*
+store<T>::get_slot_bitmap(raw_block* block)
+{
+    return reinterpret_cast<raw_concurrent_bitmap *>(
+        util::aligned_ptr(sizeof(uint64_t), block->content_));
 }
 
 } // storage

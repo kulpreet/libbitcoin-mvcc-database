@@ -151,7 +151,9 @@ add_library( ${CANONICAL_LIB_NAME}
     "./src/database/transaction_management/transaction_context.cpp"
     "./src/database/transaction_management/transaction_manager.cpp"
     "./src/database/tuples/block_tuple.cpp"
-    "./src/database/databases/block_database.cpp" )
+    "./src/database/databases/block_database.cpp"
+    "./src/database/storage/util.cpp"
+    )
 
 # ${CANONICAL_LIB_NAME} project specific include directories.
 #------------------------------------------------------------------------------
@@ -190,6 +192,7 @@ if (with-tests)
     "./test/storage/object_pool.cpp"
     "./test/storage/raw_block.cpp"
     "./test/container/concurrent_bitmap.cpp"
+    "./test/storage/storage.cpp"
     )
 
   add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test
