@@ -19,11 +19,27 @@
 
 #include <random>
 #include <boost/test/unit_test.hpp>
+
+#include <bitcoin/system.hpp>
 #include <bitcoin/database/container/concurrent_bitmap.hpp>
 
 using namespace bc;
 using namespace bc::database;
 using namespace bc::database::container;
+
+static void run_threads_until_finish(uint32_t num_threads,
+    const std::function<void(uint32_t)> &workload, uint32_t repeat = 1)
+{
+    system::threadpool thread_pool(num_threads);
+    system::dispatcher dispatch(thread_pool, "multithread_util dispatcher");
+    // Shut the thread_pool down to set the number of threads
+    for (uint32_t i = 0; i < repeat; i++) {
+        // add the jobs to the queue
+        for (uint32_t j = 0; j < num_threads; j++) {
+            dispatch.concurrent([j, &workload] { workload(j); });
+        }
+    }
+}
 
 BOOST_AUTO_TEST_SUITE(concurrent_bitmap_tests)
 
@@ -175,5 +191,90 @@ BOOST_AUTO_TEST_CASE(concurrent_bitmap__first_unset_pos__with_all_but_last_set__
 
     raw_concurrent_bitmap::deallocate(bitmap);
 }
+
+/// Multithreaded access tests
+
+BOOST_AUTO_TEST_CASE(concurrent_bitmap__first_unset_pos__multithreaded__success)
+{
+    std::default_random_engine generator;
+    const uint32_t num_iters = 100;
+    const uint32_t max_elements = 10000;
+    const uint32_t num_threads = system::thread_default(0);
+
+    for (uint32_t iter = 0; iter < num_iters; ++iter) {
+        const uint32_t num_elements = std::uniform_int_distribution<uint32_t>(1U, max_elements)(generator);
+        raw_concurrent_bitmap *bitmap = raw_concurrent_bitmap::allocate(num_elements);
+        std::vector<std::vector<uint32_t>> elements(num_threads);
+
+        auto workload = [&](uint32_t thread_id) {
+            uint32_t pos = 0;
+            for (uint32_t i = 0; i < num_elements; ++i) {
+                if (bitmap->first_unset_pos(num_elements, 0, &pos) && bitmap->flip(pos, false)) {
+                    elements[thread_id].push_back(pos);
+                }
+            }
+        };
+
+        run_threads_until_finish(num_threads, workload);
+
+        // Coalesce the thread-local result vectors into one vector, and
+        // then sort the results
+        std::vector<uint32_t> all_elements;
+        for (uint32_t i = 0; i < num_threads; ++i)
+            all_elements.insert(all_elements.end(), elements[i].begin(), elements[i].end());
+
+        // Verify coalesced result size
+        BOOST_REQUIRE_EQUAL(num_elements, all_elements.size());
+        std::sort(all_elements.begin(), all_elements.end());
+        // Verify 1:1 mapping of indices to element value
+        // This represents that every slot was grabbed by only one thread
+        for (uint32_t i = 0; i < num_elements; ++i) {
+            BOOST_CHECK_EQUAL(i, all_elements[i]);
+        }
+        raw_concurrent_bitmap::deallocate(bitmap);
+    }
+}
+
+// The test attempts to concurrently flip every bit from 0 to 1, and
+// record successful flips into thread-local storage
+// This is equivalent to grabbing a free slot if used in an allocator
+BOOST_AUTO_TEST_CASE(concurrent_bitmap__flip_all_concurrently__multithreaded__success)
+{
+    std::default_random_engine generator;
+    const uint32_t num_iters = 100;
+    const uint32_t max_elements = 100000;
+    const uint32_t num_threads = system::thread_default(0);
+
+    for (uint32_t iter = 0; iter < num_iters; ++iter) {
+        const uint32_t num_elements = std::uniform_int_distribution<uint32_t>(1U, max_elements)(generator);
+        raw_concurrent_bitmap *bitmap = raw_concurrent_bitmap::allocate(num_elements);
+        std::vector<std::vector<uint32_t>> elements(num_threads);
+
+        auto workload = [&](uint32_t thread_id) {
+            for (uint32_t i = 0; i < num_elements; ++i)
+                if (bitmap->flip(i, false))
+                    elements[thread_id].push_back(i);
+        };
+
+        run_threads_until_finish(num_threads, workload);
+
+        // Coalesce the thread-local result vectors into one vector, and
+        // then sort the results
+        std::vector<uint32_t> all_elements;
+        for (uint32_t i = 0; i < num_threads; ++i)
+            all_elements.insert(all_elements.end(), elements[i].begin(), elements[i].end());
+
+        // Verify coalesced result size
+        BOOST_CHECK_EQUAL(num_elements, all_elements.size());
+        std::sort(all_elements.begin(), all_elements.end());
+        // Verify 1:1 mapping of indices to element value
+        // This represents that every slot was grabbed by only one thread
+        for (uint32_t i = 0; i < num_elements; ++i) {
+            BOOST_CHECK_EQUAL(i, all_elements[i]);
+        }
+        raw_concurrent_bitmap::deallocate(bitmap);
+    }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
