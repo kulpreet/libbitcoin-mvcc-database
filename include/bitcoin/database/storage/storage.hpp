@@ -24,6 +24,7 @@
 #include <bitcoin/system.hpp>
 
 #include <bitcoin/database/transaction_management/spinlatch.hpp>
+#include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/storage/raw_block.hpp>
 #include <bitcoin/database/storage/object_pool.hpp>
 #include <bitcoin/database/storage/slot.hpp>
@@ -36,13 +37,13 @@ namespace storage {
 
 using namespace container;
 
-template <typename T>
+template <typename record>
 class store
 {
 public:
     /**
-     * Constructs a new storage for the give type T, using the given
-     * block_stre as the source of its storage blocks.
+     * Constructs a new storage for the give type record, using the
+     * given block_stre as the source of its storage blocks.
      *
      * @param store the block store to use.
      */
@@ -59,19 +60,44 @@ public:
     // Read the slot bitmap from the raw block contents
     raw_concurrent_bitmap* get_slot_bitmap(raw_block*);
 
+    /**
+     * Inserts a record, and update the version chain the link to the
+     * given delta record. The slot allocated for the record is
+     * returned.
+     *
+     * @param txn the calling transaction
+     * @param data reference to a record on stack. A copy be stored in
+     * this store, after which the record on stack can be deleted.
+     * @return the slot allocated for this insert, used to
+     * identify this record's physical location for indexes.
+     */
+    slot insert(transaction_context&, const record &);
+
 private:
 
+    // get a new block from block pool
     raw_block* get_new_block();
 
-    block_pool_ptr block_pool_;
+    // allocate a slot in raw block, set slot* to the new memory
+    // location in raw block
+    bool allocate_in(raw_block*, slot*);
 
+    // insert record into slot with given transaction context.
+    void insert_into(transaction_context&, const record&, slot);
+
+    // move insertion_header forward, getting new block from pool, if
+    // required
+    void check_move_head(std::list<raw_block *>::iterator);
+
+    block_pool_ptr block_pool_;
     std::list<raw_block*> blocks_;
     std::shared_ptr<spinlatch> blocks_latch_;
+    std::shared_ptr<spinlatch> insert_head_latch_;
 
     std::list<raw_block*>::iterator insertion_head_;
 
-    uint32_t tuple_size_;
-    uint32_t num_slots_;
+    uint32_t record_size_;
+    uint32_t num_slots_in_block_;
 };
 
 } // namespace storage

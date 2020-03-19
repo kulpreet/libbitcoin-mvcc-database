@@ -130,6 +130,9 @@ public:
 
     iterator end() const;
 
+    // copies all the data fields to destination
+    void write_to(mvcc_record<tuple, delta>*) const;
+
 private:
     // Compare and swap on txn_id_ "installs" the new version
     // txn_id_ acts as a local latch on this record.

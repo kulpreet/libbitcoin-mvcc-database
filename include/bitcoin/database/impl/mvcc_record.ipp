@@ -66,6 +66,16 @@ bool mvcc_record<tuple, delta>::get_latch_for_write(
 }
 
 template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::write_to(mvcc_record<tuple, delta>* to) const
+{
+    to->read_timestamp_ = read_timestamp_;
+    to->begin_timestamp_ = begin_timestamp_;
+    to->end_timestamp_ = end_timestamp_;
+    to->data_ = data_;
+    to->next_ = next_;
+}
+
+template <typename tuple, typename delta>
 bool mvcc_record<tuple, delta>::release_latch(
     const transaction_context& context)
 {

@@ -52,6 +52,12 @@ public:
             "Offset must be smaller than block size (to fit in the last bits).");
     }
 
+    // get memory identified by this slot
+    uintptr_t get_bytes() const
+    {
+        return bytes_;
+    }
+
     /**
      * @return ptr to the head of the block
      */
@@ -106,6 +112,8 @@ private:
     // store the offset.
     uintptr_t bytes_;
 };
+
+typedef std::shared_ptr<slot> slot_ptr;
 
 } // namespace storage
 } // namespace database

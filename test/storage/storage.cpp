@@ -17,11 +17,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <boost/test/unit_test.hpp>
+
 #include <bitcoin/database/storage/storage.hpp>
+#include <bitcoin/database/transaction_management/transaction_manager.hpp>
+#include <bitcoin/database/tuples/block_tuple.hpp>
+#include <bitcoin/database/tuples/block_tuple_delta.hpp>
+#include <bitcoin/database/tuples/mvcc_record.hpp>
 
 using namespace bc;
 using namespace bc::database;
 using namespace bc::database::storage;
+using namespace bc::database::tuples;
 
 BOOST_AUTO_TEST_SUITE(storage_tests)
 
@@ -32,6 +38,20 @@ BOOST_AUTO_TEST_CASE(storage__constructor____success)
   const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
 
   store<int64_t> instance{block_store};
+}
+
+BOOST_AUTO_TEST_CASE(storage__insert__record__success)
+{
+  const uint64_t size_limit = 1;
+  const uint64_t reuse_limit = 1;
+  const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+
+  store<block_mvcc_record> instance{block_store};
+
+  transaction_manager manager;
+  auto context = manager.begin_transaction();
+  block_mvcc_record record(context);
+  instance.insert(context, record);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
