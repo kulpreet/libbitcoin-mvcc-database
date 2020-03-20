@@ -59,6 +59,7 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
 
   // use constructor, will give us a latched record
   block_delta_mvcc_record delta_record(context);
+  delta_record.get_data().state = 1;
   auto delta_slot = instance2.insert(context, delta_record);
 
   // We need to install the records next, and set the commit actions
@@ -108,6 +109,8 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
   // insert and then read through all versions.
   auto context2 = manager.begin_transaction();
   auto read_result = instance.read(record_slot, context2, block_tuple::read_from_delta);
+
+  BOOST_CHECK_EQUAL(read_result->state, 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
