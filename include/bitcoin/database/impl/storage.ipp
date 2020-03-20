@@ -32,7 +32,8 @@ store<record>::store(const block_pool_ptr pool)
     : block_pool_(pool)
 {
     blocks_latch_ = std::make_shared<spinlatch>();
-    if (block_pool_ != nullptr) {
+    if (block_pool_ != nullptr)
+    {
         raw_block* new_block = get_new_block();
         record_size_ = sizeof(record);
         num_slots_in_block_ = BLOCK_SIZE / record_size_;
@@ -115,7 +116,8 @@ slot store<record>::insert(transaction_context& context,
       }
 
       auto set_success = (*block)->set_busy_status();
-      if (set_success) {
+      if (set_success)
+      {
           // No one is inserting into this block
           if (allocate_in(*block, &result)) {
               // The block is not full, succeed
@@ -165,16 +167,40 @@ bool store<record>::allocate_in(raw_block* block, slot* use_slot)
 
 // We don't check if the block is full or not, we just move forward
 template <typename record>
-void store<record>::check_move_head(std::list<raw_block *>::iterator block_iter) {
+typename record::tuple_ptr
+store<record>::read(const slot& from, const transaction_context& context,
+    typename record::reader read_with) const
+{
+    std::cerr << "in store::read..." << std::endl;
+    // Get mvcc record from memory pointed to by slot
+    auto bytes = from.get_bytes();
+    std::cerr << "in store::read... got bytes " << std::endl;
+    auto ptr = reinterpret_cast<record*>(bytes);
+    std::cerr << "in store::read... got ptr " << std::endl;
+
+    // get the record obtained
+    auto result = ptr->read_record(context, read_with);
+    std::cerr << "in store::read... got result from read_record " << std::endl;
+
+    // return the obtained record
+    return result;
+}
+
+// We don't check if the block is full or not, we just move forward
+template <typename record>
+void store<record>::check_move_head(std::list<raw_block *>::iterator block_iter)
+{
     scopedspinlatch guard_head(insert_head_latch_);
-  if (block_iter == insertion_head_) {
+  if (block_iter == insertion_head_)
+  {
       // move the insertion head to point to the next block
     insertion_head_++;
   }
 
   // If there are no more free blocks, create a new empty block and
   // point the insertion_head to it
-  if (insertion_head_ == blocks_.end()) {
+  if (insertion_head_ == blocks_.end())
+  {
       raw_block *new_block = get_new_block();
     // take latch
     scopedspinlatch guard_block(blocks_latch_);

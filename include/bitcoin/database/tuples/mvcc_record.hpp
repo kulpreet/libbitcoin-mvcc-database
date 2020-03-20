@@ -57,6 +57,9 @@ public:
     typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
     typedef delta_iterator<delta_mvcc_record*> iterator;
 
+    // reader function to read from delta records into tuple
+    typedef void (*reader)(tuple&, delta&);
+
     static delta_mvcc_record* no_next;
     static const tuple_ptr not_found;
 
@@ -68,7 +71,7 @@ public:
     // Finds version that is readable by context and sets
     // the value appropriate in tuple. If can't read any version, then
     // returns nullptr - the caller should check for this.
-    tuple_ptr read_record(const transaction_context&, void (*reader)(tuple&, delta&));
+    tuple_ptr read_record(const transaction_context&, reader);
 
     // sets up a new version using the transaction context and the
     // writer. This will later be installed.

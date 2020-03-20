@@ -73,6 +73,13 @@ public:
      */
     slot insert(transaction_context&, const record &);
 
+    // Given a slot and a transaction context, read the entire version
+    // chain, build the final state of the mvcc version chain into a
+    // single mvcc record and return it. The record does not
+    // correspond to the memory in raw block memory object pool.
+    typename record::tuple_ptr read(const slot&, const transaction_context&,
+        typename record::reader) const;
+
 private:
 
     // get a new block from block pool

@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(storage__constructor____success)
   const uint64_t reuse_limit = 1;
   const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
 
-  store<int64_t> instance{block_store};
+  store<block_mvcc_record> instance{block_store};
 }
 
 BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
@@ -106,6 +106,8 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
 
   // Then we read the records using the slot returned from first
   // insert and then read through all versions.
+  auto context2 = manager.begin_transaction();
+  auto read_result = instance.read(record_slot, context2, block_tuple::read_from_delta);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
