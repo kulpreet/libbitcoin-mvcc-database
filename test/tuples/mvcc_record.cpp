@@ -101,12 +101,12 @@ BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success
     BOOST_CHECK_EQUAL(record.get_end_timestamp(), context.get_timestamp());
 
     // create first delta record
-    record.get_data().state = 1;
     block_mvcc_record::delta_mvcc_record_ptr delta = record.allocate_next(context);
+    delta->get_data().state = 1;
 
     // set end ts, and release latch
     delta->install(context);
-    // set end ts, and release latch
+    // set end ts
     record.install(context);
     BOOST_CHECK_EQUAL(record.get_end_timestamp(), context.get_timestamp());
 }
@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
     BOOST_CHECK(record->get_end_timestamp() == context.get_timestamp());
     BOOST_CHECK(record->get_read_timestamp() == none_read);
 
-    // test record timestamps
+    // test delta timestamps
     BOOST_CHECK(delta->get_begin_timestamp() == context.get_timestamp());
     BOOST_CHECK(delta->get_end_timestamp() == infinity);
     BOOST_CHECK(delta->get_read_timestamp() == none_read);

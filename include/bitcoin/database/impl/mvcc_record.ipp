@@ -29,8 +29,8 @@ namespace database {
 namespace tuples {
 
 template <typename tuple, typename delta>
-const typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr
-mvcc_record<tuple, delta>::no_next = std::make_shared<delta_mvcc_record>();
+typename mvcc_record<tuple, delta>::delta_mvcc_record*
+mvcc_record<tuple, delta>::no_next = new delta_mvcc_record();
 
 template <typename tuple, typename delta>
 const typename mvcc_record<tuple, delta>::tuple_ptr
@@ -66,8 +66,11 @@ bool mvcc_record<tuple, delta>::get_latch_for_write(
 }
 
 template <typename tuple, typename delta>
-void mvcc_record<tuple, delta>::write_to(mvcc_record<tuple, delta>* to) const
+void mvcc_record<tuple, delta>::write_to(mvcc_record<tuple, delta>* to,
+    const transaction_context& context) const
 {
+    BITCOIN_ASSERT_MSG(to->is_latched_by(context),
+        "Before writing to memory, get a write latch on it");
     to->read_timestamp_ = read_timestamp_;
     to->begin_timestamp_ = begin_timestamp_;
     to->end_timestamp_ = end_timestamp_;
@@ -201,6 +204,13 @@ template <typename tuple, typename delta>
 void mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record_ptr delta_record, const transaction_context& context)
 {
+    install_next_version(delta_record.get(), context);
+}
+
+template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::install_next_version(
+    delta_mvcc_record* delta_record, const transaction_context& context)
+{
     // install delta
     if (!delta_record->install(context)) {
         return;
@@ -228,7 +238,7 @@ mvcc_record<tuple, delta>::end() const
 }
 
 template <typename tuple, typename delta>
-const typename mvcc_record<tuple, delta>::delta_mvcc_record_ptr
+typename mvcc_record<tuple, delta>::delta_mvcc_record*
 mvcc_record<tuple, delta>::get_next() const
 {
     return next_;

@@ -55,9 +55,9 @@ public:
     typedef std::shared_ptr<delta> delta_ptr;
     typedef mvcc_record<delta, delta> delta_mvcc_record;
     typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
-    typedef delta_iterator<delta_mvcc_record_ptr> iterator;
+    typedef delta_iterator<delta_mvcc_record*> iterator;
 
-    static const delta_mvcc_record_ptr no_next;
+    static delta_mvcc_record* no_next;
     static const tuple_ptr not_found;
 
     // constructors
@@ -93,6 +93,9 @@ public:
     // latches are still acquired by current txn.
     void install_next_version(delta_mvcc_record_ptr, const transaction_context&);
 
+    // overloaded to work with naked pointer to memory in block object pool
+    void install_next_version(delta_mvcc_record*, const transaction_context&);
+
     // commit releases latch and sets timestamp
     bool commit(const transaction_context&, const timestamp_t);
 
@@ -123,7 +126,7 @@ public:
 
     tuple& get_data();
 
-    const delta_mvcc_record_ptr get_next() const;
+    delta_mvcc_record* get_next() const;
 
     // Iterator definition and operators
     iterator begin() const;
@@ -131,7 +134,10 @@ public:
     iterator end() const;
 
     // copies all the data fields to destination
-    void write_to(mvcc_record<tuple, delta>*) const;
+    void write_to(mvcc_record<tuple, delta>*, const transaction_context&) const;
+
+    // returns true if this tuple is latched by context
+    bool is_latched_by(const transaction_context&);
 
 private:
     // Compare and swap on txn_id_ "installs" the new version
@@ -151,10 +157,7 @@ private:
     tuple data_;
 
     // next_ points to the next version
-    delta_mvcc_record_ptr next_;
-
-    // returns true if this tuple is latched by context
-    bool is_latched_by(const transaction_context&);
+    delta_mvcc_record* next_;
 };
 
 } // namespace tuples

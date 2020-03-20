@@ -74,7 +74,7 @@ store<record>::get_slot_bitmap(raw_block* block)
 }
 
 // Insertion header points to the first block that has free tuple
-// slots Once a txn arrives, it will start from the insertion header
+// slots. Once a txn arrives, it will start from the insertion header
 // to find the first idle (no other txn is trying to get tuple slots
 // in that block) and non-full block.
 //
@@ -86,7 +86,7 @@ store<record>::get_slot_bitmap(raw_block* block)
 // writing to the block.
 template <typename record>
 slot store<record>::insert(transaction_context& context,
-    const record &tuple)
+    const record &to_insert)
 {
   slot result;
   auto block = insertion_head_;
@@ -135,7 +135,7 @@ slot store<record>::insert(transaction_context& context,
 
   (*block)->clear_busy_status();
   std::cerr << "calling insert into " << std::endl;
-  insert_into(context, tuple, result);
+  insert_into(context, to_insert, result);
   std::cerr << "back from return into" << std::endl;
 
   return result;
@@ -187,18 +187,18 @@ void store<record>::check_move_head(std::list<raw_block *>::iterator block_iter)
 
 template <typename record>
 void store<record>::insert_into(transaction_context& context,
-    const record& tuple, slot use_slot)
+    const record& to_insert, slot use_slot)
 {
     // type case slot into record, so we can use latch/commit methods.
-    uintptr_t location = use_slot.get_bytes();
-    record* destination = reinterpret_cast<record*>(location);
+    auto location = use_slot.get_bytes();
+    auto destination = reinterpret_cast<record*>(location);
     std::cerr << "record as destination: " << destination << std::endl;
 
     // get latch on record
     destination->get_latch_for_write(context);
 
-    // write from tuple to destination
-    tuple.write_to(destination);
+    // write from to_insert to destination
+    to_insert.write_to(destination, context);
 
     std::cerr << "return from insert into" << std::endl;
 }
