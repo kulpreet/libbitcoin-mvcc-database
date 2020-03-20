@@ -113,4 +113,79 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
   BOOST_CHECK_EQUAL(read_result->state, 1);
 }
 
+BOOST_AUTO_TEST_CASE(storage__insert_update_read__different_contexts__success)
+{
+  const uint64_t size_limit = 1;
+  const uint64_t reuse_limit = 1;
+  const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+
+  store<block_mvcc_record> instance{block_store};
+
+  transaction_manager manager;
+  auto context = manager.begin_transaction();
+  block_mvcc_record record(context);
+  auto record_slot = instance.insert(context, record);
+
+  // delta storage
+  const block_pool_ptr delta_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+  store<block_delta_mvcc_record> instance2{delta_store};
+
+  // use constructor, will give us a latched record
+  block_delta_mvcc_record delta_record(context);
+  delta_record.get_data().state = 1;
+  auto delta_slot = instance2.insert(context, delta_record);
+
+  // We need to install the records next, and set the commit actions
+  auto record_bytes = record_slot.get_bytes();
+  auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
+  record_ptr->install(context);
+  context.register_end_action([record_ptr, context]()
+  {
+      // commit to context timestamp
+      record_ptr->commit(context, context.get_timestamp());
+  });
+
+  BOOST_CHECK(record_ptr->get_next() == block_mvcc_record::no_next);
+
+  // commit the insert transaction
+  context.commit();
+
+  // Start new transaction for update
+  auto context2 = manager.begin_transaction();
+
+  auto delta_bytes = delta_slot.get_bytes();
+  auto delta_ptr = reinterpret_cast<block_mvcc_record::delta_mvcc_record*>(delta_bytes);
+
+  record_ptr->install_next_version(delta_ptr, context2);
+  BOOST_CHECK(record_ptr->get_next() != block_mvcc_record::no_next);
+
+  context2.register_end_action([delta_ptr, context2]()
+  {
+      // commit to infinity
+      delta_ptr->commit(context2);
+  });
+
+  // commit the update transaction
+  context2.commit();
+
+  // test record timestamps
+  BOOST_CHECK(record_ptr->get_begin_timestamp() == context.get_timestamp());
+  BOOST_CHECK(record_ptr->get_end_timestamp() == context2.get_timestamp());
+  BOOST_CHECK(record_ptr->get_read_timestamp() == none_read);
+
+  // test delta timestamps
+  BOOST_CHECK(delta_ptr->get_begin_timestamp() == context2.get_timestamp());
+  BOOST_CHECK(delta_ptr->get_end_timestamp() == infinity);
+  BOOST_CHECK(delta_ptr->get_read_timestamp() == none_read);
+
+  // Then we read the records using the slot returned from first
+  // insert and then read through all versions.
+  auto context3 = manager.begin_transaction();
+  auto read_result = instance.read(record_slot, context3, block_tuple::read_from_delta);
+
+  BOOST_CHECK_EQUAL(read_result->state, 1);
+  BOOST_CHECK(record_ptr->get_read_timestamp() == context3.get_timestamp());
+  BOOST_CHECK(delta_ptr->get_read_timestamp() == context3.get_timestamp());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
