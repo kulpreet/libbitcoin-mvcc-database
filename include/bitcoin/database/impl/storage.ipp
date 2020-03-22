@@ -20,6 +20,8 @@
 #ifndef LIBBITCOIN_MVCC_DATABASE_MVCC_STORAGE_IPP
 #define LIBBITCOIN_MVCC_DATABASE_MVCC_STORAGE_IPP
 
+#include <new>
+
 #include <bitcoin/database/storage/storage.hpp>
 #include <bitcoin/database/storage/util.hpp>
 
@@ -60,8 +62,17 @@ raw_block* store<record>::get_new_block()
 }
 
 template <typename record>
+raw_block* store<record>::get_current_block()
+{
+    return *insertion_head_;
+}
+
+template <typename record>
 void store<record>::initialize_raw_block(raw_block* block)
 {
+    // The fill and set insert_head_ two can go into raw_block, but we
+    // are avoiding adding methods to it.
+    memset(block->content_, 0, BLOCK_SIZE - sizeof(uint32_t));
     block->insert_head_ = 0;
     get_slot_bitmap(block)->unsafe_clear(num_slots_in_block_);
 }
@@ -89,80 +100,77 @@ template <typename record>
 slot store<record>::insert(transaction_context& context,
     const record &to_insert)
 {
-  slot result;
-  auto block = insertion_head_;
+    BITCOIN_ASSERT_MSG(!context.is_committed(),
+        "Can't insert using a committed transaction");
 
-  while (true)
-  {
-      std::cerr << "block: " << *block << std::endl;
-      std::cerr << "blocks begin: " << *(blocks_.begin()) << std::endl;
-      std::cerr << "blocks end: " << *(blocks_.end()) << std::endl;
-      if (block == blocks_.end())
-      {
-          raw_block *new_block = get_new_block();
-          auto busy = new_block->set_busy_status();
-          BITCOIN_ASSERT_MSG(busy, "Status of new block should not be busy");
+    slot result;
+    auto block = insertion_head_;
 
-          // No need to flip the busy status bit
-          allocate_in(new_block, &result);
+    while (true)
+    {
+        if (block == blocks_.end())
+        {
+            raw_block *new_block = get_new_block();
+            auto busy = new_block->set_busy_status();
+            BITCOIN_ASSERT_MSG(busy, "Status of new block should not be busy");
 
-          // take latch
-          scopedspinlatch guard(blocks_latch_);
+            // No need to flip the busy status bit
+            allocate_in(new_block, &result);
 
-          // insert block
-          blocks_.push_back(new_block);
-          block = --blocks_.end();
-          break;
-      }
+            // take latch
+            scopedspinlatch guard(blocks_latch_);
 
-      auto set_success = (*block)->set_busy_status();
-      if (set_success)
-      {
-          // No one is inserting into this block
-          if (allocate_in(*block, &result)) {
-              // The block is not full, succeed
-              break;
-          }
-          // Fail to insert into the block, flip back the status bit
-          (*block)->clear_busy_status();
-          // if the full block is the insertion_header, move the
-          // insertion_header Next insert txn will search from the new
-          // insertion_header
-          check_move_head(block);
-      }
-      // The block is full or the block is being inserted by other
-      // txn, try next block
-      ++block;
-  }
+            // insert block
+            blocks_.push_back(new_block);
+            block = --blocks_.end();
+            break;
+        }
 
-  (*block)->clear_busy_status();
-  std::cerr << "calling insert into " << std::endl;
-  insert_into(context, to_insert, result);
-  std::cerr << "back from return into" << std::endl;
+        auto set_success = (*block)->set_busy_status();
+        if (set_success)
+        {
+            // No one is inserting into this block
+            if (allocate_in(*block, &result)) {
+                // The block is not full, succeed
+                break;
+            }
+            // Fail to insert into the block, flip back the status bit
+            (*block)->clear_busy_status();
+            // if the full block is the insertion_header, move the
+            // insertion_header Next insert txn will search from the new
+            // insertion_header
+            check_move_head(block);
+        }
+        // The block is full or the block is being inserted by other
+        // txn, try next block
+        ++block;
+    }
 
-  return result;
+    (*block)->clear_busy_status();
+    insert_into(context, to_insert, result);
+    return result;
 }
 
 template <typename record>
 bool store<record>::allocate_in(raw_block* block, slot* use_slot)
 {
-  raw_concurrent_bitmap *bitmap =  get_slot_bitmap(block);
-  const uint32_t start = block->get_insert_head();
+    raw_concurrent_bitmap *bitmap =  get_slot_bitmap(block);
+    const uint32_t start = block->get_insert_head();
 
-  // We are not allowed to insert into this block any more
-  if (start == num_slots_in_block_) return false;
+    // We are not allowed to insert into this block any more
+    if (start == num_slots_in_block_) return false;
 
-  uint32_t pos = start;
-  // We do not support concurrent insertion to the same block.
-  // Assumption: Different threads cannot insert into the same block at
-  // the same time.
-  // If the block is not full, the function should always succeed, i.e.
-  // flip should always return true.
-  bool flip_res = bitmap->flip(pos, false);
-  BITCOIN_ASSERT_MSG(flip_res, "flip should always succeed");
-  *use_slot = slot(block, pos);
-  block->insert_head_++;
-  return true;
+    uint32_t pos = start;
+    // We do not support concurrent insertion to the same block.
+    // Assumption: Different threads cannot insert into the same block at
+    // the same time.
+    // If the block is not full, the function should always succeed, i.e.
+    // flip should always return true.
+    bool flip_res = bitmap->flip(pos, false);
+    BITCOIN_ASSERT_MSG(flip_res, "flip should always succeed");
+    *use_slot = slot(block, pos);
+    block->insert_head_++;
+    return true;
 }
 
 // We don't check if the block is full or not, we just move forward
@@ -171,16 +179,12 @@ typename record::tuple_ptr
 store<record>::read(const slot& from, const transaction_context& context,
     typename record::reader read_with) const
 {
-    std::cerr << "in store::read..." << std::endl;
     // Get mvcc record from memory pointed to by slot
     auto bytes = from.get_bytes();
-    std::cerr << "in store::read... got bytes " << std::endl;
     auto ptr = reinterpret_cast<record*>(bytes);
-    std::cerr << "in store::read... got ptr " << std::endl;
 
     // get the record obtained
     auto result = ptr->read_record(context, read_with);
-    std::cerr << "in store::read... got result from read_record " << std::endl;
 
     // return the obtained record
     return result;
@@ -217,16 +221,13 @@ void store<record>::insert_into(transaction_context& context,
 {
     // type case slot into record, so we can use latch/commit methods.
     auto location = use_slot.get_bytes();
-    auto destination = reinterpret_cast<record*>(location);
-    std::cerr << "record as destination: " << destination << std::endl;
+    auto destination = new (reinterpret_cast<record*>(location)) record{};
 
     // get latch on record
     destination->get_latch_for_write(context);
 
     // write from to_insert to destination
     to_insert.write_to(destination, context);
-
-    std::cerr << "return from insert into" << std::endl;
 }
 
 } // storage

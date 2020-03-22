@@ -94,10 +94,10 @@ public:
     // install the next record from this version, return true on
     // success. The new version or this are not committed, i.e. the
     // latches are still acquired by current txn.
-    void install_next_version(delta_mvcc_record_ptr, const transaction_context&);
+    bool install_next_version(delta_mvcc_record_ptr, const transaction_context&);
 
     // overloaded to work with naked pointer to memory in block object pool
-    void install_next_version(delta_mvcc_record*, const transaction_context&);
+    bool install_next_version(delta_mvcc_record*, const transaction_context&);
 
     // commit releases latch and sets timestamp
     bool commit(const transaction_context&, const timestamp_t);
@@ -140,7 +140,7 @@ public:
     void write_to(mvcc_record<tuple, delta>*, const transaction_context&) const;
 
     // returns true if this tuple is latched by context
-    bool is_latched_by(const transaction_context&);
+    bool is_latched_by(const transaction_context&) const;
 
 private:
     // Compare and swap on txn_id_ "installs" the new version

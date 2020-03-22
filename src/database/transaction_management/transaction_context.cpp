@@ -28,6 +28,11 @@ transaction_context::transaction_context(timestamp_t timestamp, state state)
 {
 }
 
+bool transaction_context::is_committed() const
+{
+    return state_ == state::committed;
+}
+
 bool transaction_context::commit()
 {
     set_state(state::committed);

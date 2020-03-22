@@ -80,6 +80,8 @@ public:
     typename record::tuple_ptr read(const slot&, const transaction_context&,
         typename record::reader) const;
 
+    raw_block* get_current_block();
+
 private:
 
     // get a new block from block pool

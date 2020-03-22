@@ -43,10 +43,10 @@ mvcc_record<tuple, delta>::not_found = std::make_shared<tuple>();
 template <typename tuple, typename delta>
 mvcc_record<tuple, delta>::mvcc_record(
     const transaction_context& tx_context)
-    : txn_id_(tx_context.get_timestamp()),
-      read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
+    : read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
       end_timestamp_(infinity), data_(tuple()), next_(no_next)
 {
+    txn_id_.store(tx_context.get_timestamp());
 }
 
 template <typename tuple, typename delta>
@@ -62,7 +62,8 @@ bool mvcc_record<tuple, delta>::get_latch_for_write(
 
     // try to get the lock
     auto unlocked = not_locked;
-    return txn_id_.compare_exchange_strong(unlocked, tid);
+    auto locked = txn_id_.compare_exchange_strong(unlocked, tid);
+    return locked;
 }
 
 template <typename tuple, typename delta>
@@ -148,7 +149,7 @@ bool mvcc_record<tuple, delta>::is_visible(
 
 template <typename tuple, typename delta>
 bool mvcc_record<tuple, delta>::is_latched_by(
-    const transaction_context& context)
+    const transaction_context& context) const
 {
     return txn_id_.load() == context.get_timestamp();
 }
@@ -201,19 +202,19 @@ bool mvcc_record<tuple, delta>::commit(
 }
 
 template <typename tuple, typename delta>
-void mvcc_record<tuple, delta>::install_next_version(
+bool mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record_ptr delta_record, const transaction_context& context)
 {
-    install_next_version(delta_record.get(), context);
+    return install_next_version(delta_record.get(), context);
 }
 
 template <typename tuple, typename delta>
-void mvcc_record<tuple, delta>::install_next_version(
+bool mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record* delta_record, const transaction_context& context)
 {
     // install delta
     if (!delta_record->install(context)) {
-        return;
+        return false;
     }
 
     // set end ts for this
@@ -221,6 +222,7 @@ void mvcc_record<tuple, delta>::install_next_version(
 
     // set next to point to next delta record
     next_ = delta_record;
+    return true;
 }
 
 template <typename tuple, typename delta>

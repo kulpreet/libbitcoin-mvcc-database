@@ -60,6 +60,8 @@ public:
 
     void set_state(const state to);
 
+    bool is_committed() const;
+
 private:
     timestamp_t timestamp_;
     state state_;

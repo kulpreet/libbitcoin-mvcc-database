@@ -3,7 +3,7 @@
 Uses cmake. Requires libbitcoin-system.
 
 `mkdir build && cd build`
-`PKG_CONFIG_PATH=path/to/libbitcoin-system/lib/pkgconfig/ cmake ../`
+`PKG_CONFIG_PATH=path/to/libbitcoin-system/lib/pkgconfig/ cmake -DCMAKE_BUILD_TYPE=Release|Debug ../`
 `make && make test`
 
 # Goals
