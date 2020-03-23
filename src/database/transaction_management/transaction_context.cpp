@@ -24,7 +24,7 @@ namespace libbitcoin {
 namespace database {
 
 transaction_context::transaction_context(timestamp_t timestamp, state state)
-    : timestamp_(timestamp), state_(state), end_actions_()
+    : timestamp_(timestamp), state_(state), commit_actions_(), abort_actions_()
 {
 }
 
@@ -36,16 +36,31 @@ bool transaction_context::is_committed() const
 bool transaction_context::commit()
 {
     set_state(state::committed);
-    for (auto action = end_actions_.begin(); action != end_actions_.end(); action++)
+    for (auto action = commit_actions_.begin(); action != commit_actions_.end(); action++)
     {
         (*action)();
     }
     return true;
 }
 
-void transaction_context::register_end_action(const transaction_end_action& action)
+bool transaction_context::abort()
 {
-    end_actions_.push_front(action);
+    set_state(state::aborted);
+    for (auto action = abort_actions_.begin(); action != abort_actions_.end(); action++)
+    {
+        (*action)();
+    }
+    return true;
+}
+
+void transaction_context::register_commit_action(const transaction_end_action& action)
+{
+    commit_actions_.push_front(action);
+}
+
+void transaction_context::register_abort_action(const transaction_end_action& action)
+{
+    abort_actions_.push_front(action);
 }
 
 timestamp_t transaction_context::get_timestamp() const

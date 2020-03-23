@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
     auto record = std::make_shared<block_mvcc_record>(context);
     // install it
     record->install(context);
-    context.register_end_action([record, context]()
+    context.register_commit_action([record, context]()
         {
             // commit to context timestamp
             record->commit(context, context.get_timestamp());
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
     record->install_next_version(delta, context);
     BOOST_CHECK(record->get_next() != block_mvcc_record::no_next);
 
-    context.register_end_action([delta, context]()
+    context.register_commit_action([delta, context]()
         {
             // commit to infinity
             delta->commit(context);

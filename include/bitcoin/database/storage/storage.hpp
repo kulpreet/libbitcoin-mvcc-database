@@ -54,12 +54,6 @@ public:
      */
     ~store();
 
-    // Initialize a raw block
-    void initialize_raw_block(raw_block*);
-
-    // Read the slot bitmap from the raw block contents
-    raw_concurrent_bitmap* get_slot_bitmap(raw_block*);
-
     /**
      * Inserts a record, and update the version chain the link to the
      * given delta record. The slot allocated for the record is
@@ -86,6 +80,12 @@ private:
 
     // get a new block from block pool
     raw_block* get_new_block();
+
+    // Initialize a raw block
+    void initialize_raw_block(raw_block*);
+
+    // Read the slot bitmap from the raw block contents
+    raw_concurrent_bitmap* get_slot_bitmap(raw_block*);
 
     // allocate a slot in raw block, set slot* to the new memory
     // location in raw block

@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
   auto record_bytes = record_slot.get_bytes();
   auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
   record_ptr->install(context);
-  context.register_end_action([record_ptr, context]()
+  context.register_commit_action([record_ptr, context]()
   {
       // commit to context timestamp
       record_ptr->commit(context, context.get_timestamp());
@@ -85,13 +85,13 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__block_mvcc_record__success)
   record_ptr->install_next_version(delta_ptr, context);
   BOOST_CHECK(record_ptr->get_next() != block_mvcc_record::no_next);
 
-  context.register_end_action([delta_ptr, context]()
+  context.register_commit_action([delta_ptr, context]()
   {
       // commit to infinity
       delta_ptr->commit(context);
   });
 
-  context.register_end_action([record_ptr, context]()
+  context.register_commit_action([record_ptr, context]()
   {
       // commit to context timestamp
       record_ptr->commit(context, context.get_timestamp());
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__different_contexts__success)
   auto record_bytes = record_slot.get_bytes();
   auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
   record_ptr->install(context);
-  context.register_end_action([record_ptr, context]()
+  context.register_commit_action([record_ptr, context]()
   {
       // commit to context timestamp
       record_ptr->commit(context, context.get_timestamp());
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__different_contexts__success)
   BOOST_CHECK_EQUAL(record_ptr->get_next(), delta_ptr);
   BOOST_CHECK(delta_ptr->get_next() != block_mvcc_record::no_next);
 
-  context2.register_end_action([delta_ptr, context2]()
+  context2.register_commit_action([delta_ptr, context2]()
   {
       // commit to infinity
       delta_ptr->commit(context2);
@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_CASE(storage__multple_inserts_updates_reads__different_contexts_
       auto record_bytes = record_slot.get_bytes();
       auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
       record_ptr->install(context);
-      context.register_end_action([record_ptr, context]()
+      context.register_commit_action([record_ptr, context]()
       {
           // commit to context timestamp
           record_ptr->commit(context, context.get_timestamp());
@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE(storage__multple_inserts_updates_reads__different_contexts_
           BOOST_REQUIRE(record_ptr->install_next_version(delta_ptr, context2));
           BOOST_CHECK(record_ptr->get_next() != block_mvcc_record::no_next);
 
-          context2.register_end_action([delta_ptr, context2]()
+          context2.register_commit_action([delta_ptr, context2]()
           {
               // commit to infinity
               delta_ptr->commit(context2);

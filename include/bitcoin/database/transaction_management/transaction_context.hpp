@@ -34,7 +34,8 @@ namespace database {
 enum class state
 {
     active,
-    committed
+    committed,
+    aborted
 };
 
 typedef std::function<void()> transaction_end_action;
@@ -48,11 +49,19 @@ public:
     /// Constructor
     transaction_context(timestamp_t timestamp, state state);
 
-    /// Commit a transaction, calling all end transaction functions
+    /// Commit the transaction, calling all commit transaction functions
     /// registered
     bool commit();
 
-    void register_end_action(const transaction_end_action&);
+    /// Abort the transaction, calling all abort transaction functions
+    /// registered
+    bool abort();
+
+    // Actions to execute when transaction commits
+    void register_commit_action(const transaction_end_action&);
+
+    // Actions to execute if transaction aborts
+    void register_abort_action(const transaction_end_action&);
 
     timestamp_t get_timestamp() const;
 
@@ -66,7 +75,8 @@ private:
     timestamp_t timestamp_;
     state state_;
 
-    std::forward_list<transaction_end_action> end_actions_;
+    std::forward_list<transaction_end_action> commit_actions_;
+    std::forward_list<transaction_end_action> abort_actions_;
 };
 
 } // namespace database
