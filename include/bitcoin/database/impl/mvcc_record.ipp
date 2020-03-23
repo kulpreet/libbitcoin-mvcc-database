@@ -61,8 +61,8 @@ bool mvcc_record<tuple, delta>::get_latch_for_write(
         return true;
 
     // try to get the lock
-    auto unlocked = not_locked;
-    auto locked = txn_id_.compare_exchange_strong(unlocked, tid);
+    auto unlatched = not_latched;
+    auto locked = txn_id_.compare_exchange_strong(unlatched, tid);
     return locked;
 }
 
@@ -88,9 +88,9 @@ bool mvcc_record<tuple, delta>::release_latch(
 
     // locked by tid, try to release the latch
     if (old_tid == tid)
-        return txn_id_.compare_exchange_strong(tid, not_locked);
+        return txn_id_.compare_exchange_strong(tid, not_latched);
 
-    // Locked by another txn or already unlocked
+    // Locked by another txn or already not_latched
     return false;
 }
 
@@ -135,7 +135,7 @@ bool mvcc_record<tuple, delta>::is_visible(
 
     // No write lock held by any other transaction
     auto old_tid = txn_id_.load();
-    if (old_tid != not_locked && old_tid != timestamp) {
+    if (old_tid != not_latched && old_tid != timestamp) {
         return false;
     }
 
@@ -212,6 +212,9 @@ template <typename tuple, typename delta>
 bool mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record* delta_record, const transaction_context& context)
 {
+    BITCOIN_ASSERT_MSG(!get_latch_for_write(context),
+        "Failed to latch record for update");
+
     // install delta
     if (!delta_record->install(context)) {
         return false;

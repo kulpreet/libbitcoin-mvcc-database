@@ -207,10 +207,13 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__different_contexts__success)
   BOOST_CHECK_EQUAL(record_ptr->get_next(), delta_ptr);
   BOOST_CHECK(delta_ptr->get_next() != block_mvcc_record::no_next);
 
-  context2.register_commit_action([delta_ptr, context2]()
+  context2.register_commit_action([delta_ptr, record_ptr, context2]()
   {
       // commit to infinity
       delta_ptr->commit(context2);
+
+      // commit to context2's timestamp
+      record_ptr->commit(context2, context2.get_timestamp());
   });
 
   // commit the update transaction
@@ -220,11 +223,13 @@ BOOST_AUTO_TEST_CASE(storage__insert_update_read__different_contexts__success)
   BOOST_CHECK_EQUAL(record_ptr->get_begin_timestamp(), context.get_timestamp());
   BOOST_CHECK_EQUAL(record_ptr->get_end_timestamp(), context2.get_timestamp());
   BOOST_CHECK_EQUAL(record_ptr->get_read_timestamp(), none_read);
+  BOOST_CHECK(!record_ptr->is_latched_by(context2));
 
   // test delta timestamps
   BOOST_CHECK_EQUAL(delta_ptr->get_begin_timestamp(), context2.get_timestamp());
   BOOST_CHECK_EQUAL(delta_ptr->get_end_timestamp(), infinity);
   BOOST_CHECK_EQUAL(delta_ptr->get_read_timestamp(), none_read);
+  BOOST_CHECK(!delta_ptr->is_latched_by(context2));
 
   // Then we read the records using the slot returned from first
   // insert and then read through all versions.
@@ -295,10 +300,13 @@ BOOST_AUTO_TEST_CASE(storage__multple_inserts_updates_reads__different_contexts_
           BOOST_REQUIRE(record_ptr->install_next_version(delta_ptr, context2));
           BOOST_CHECK(record_ptr->get_next() != block_mvcc_record::no_next);
 
-          context2.register_commit_action([delta_ptr, context2]()
+          context2.register_commit_action([delta_ptr, record_ptr, context2]()
           {
               // commit to infinity
               delta_ptr->commit(context2);
+
+              // commit to context
+              record_ptr->commit(context2, context2.get_timestamp());
           });
 
           // commit the update transaction

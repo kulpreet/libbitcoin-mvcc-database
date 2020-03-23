@@ -37,8 +37,8 @@ typedef uint64_t mvcc_column;
 // Define infinity to be -1. Might have to change this.
 const uint64_t infinity = -1;
 
-// not_locked used as the sentinel to mark record is not locked.
-const uint64_t not_locked = 0;
+// not_latched used as the sentinel to mark record is not latched.
+const uint64_t not_latched = 0;
 
 // No one has read this version yet.
 const uint64_t none_read = 0;
