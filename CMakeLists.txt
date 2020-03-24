@@ -194,6 +194,7 @@ if (with-tests)
     "./test/storage/raw_block.cpp"
     "./test/container/concurrent_bitmap.cpp"
     "./test/storage/storage.cpp"
+    "./test/mvto/accessor.cpp"
     )
 
   add_test( NAME libbitcoin-mvcc-database-test COMMAND libbitcoin-mvcc-database-test

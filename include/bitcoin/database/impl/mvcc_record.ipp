@@ -253,6 +253,14 @@ mvcc_record<tuple, delta>::get_next() const
 }
 
 template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::set_next(delta_mvcc_record* next)
+{
+    next_ = next;
+}
+
+
+
+template <typename tuple, typename delta>
 mvcc_column mvcc_record<tuple, delta>::get_read_timestamp() const
 {
     return read_timestamp_;

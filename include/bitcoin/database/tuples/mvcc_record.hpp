@@ -133,6 +133,8 @@ public:
 
     delta_mvcc_record* get_next() const;
 
+    void set_next(delta_mvcc_record*);
+
     // Iterator definition and operators
     iterator begin() const;
 

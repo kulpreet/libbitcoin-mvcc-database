@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include <boost/test/unit_test.hpp>
 
 #include <bitcoin/database/storage/storage.hpp>
@@ -423,9 +424,12 @@ BOOST_AUTO_TEST_CASE(storage__update_abort__undo__success)
   // register abort action only for record as delta is an insert that
   // will be cleared out by garbage collector
   auto end_ts = record_ptr->get_end_timestamp();
-  context2.register_abort_action([record_ptr, context2, end_ts]()
+  auto next = record_ptr->get_next();
+  context2.register_abort_action([record_ptr, context2, end_ts, next]()
   {
-      // reset end timestamp and release latch, that is what commit does
+      // reset end timestamp and release latch, that is what commit
+      // does
+      record_ptr->set_next(next);
       record_ptr->commit(context2, end_ts);
   });
 
@@ -455,6 +459,7 @@ BOOST_AUTO_TEST_CASE(storage__update_abort__undo__success)
   BOOST_REQUIRE_EQUAL(record_ptr->get_read_timestamp(), context.get_timestamp());
   BOOST_REQUIRE(!record_ptr->is_latched_by(context));
   BOOST_REQUIRE(!record_ptr->is_latched_by(context2));
+  BOOST_REQUIRE_EQUAL(record_ptr->get_next(), block_mvcc_record::no_next);
 
   // Then we read the records using the slot returned from first
   // insert and verify that the update is not readable
