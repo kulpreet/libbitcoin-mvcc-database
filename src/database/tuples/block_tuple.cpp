@@ -24,7 +24,7 @@ namespace database {
 namespace tuples {
 
 block_tuple::block_tuple()
-  : height(not_found)
+  : height(not_found), state(0)
 {
 }
 

@@ -127,6 +127,8 @@ public:
 
     mvcc_column get_end_timestamp() const;
 
+    void set_end_timestamp(const timestamp_t);
+
     tuple& get_data();
 
     delta_mvcc_record* get_next() const;

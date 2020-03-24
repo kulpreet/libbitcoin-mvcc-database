@@ -62,8 +62,8 @@ bool mvcc_record<tuple, delta>::get_latch_for_write(
 
     // try to get the lock
     auto unlatched = not_latched;
-    auto locked = txn_id_.compare_exchange_strong(unlatched, tid);
-    return locked;
+    auto latched = txn_id_.compare_exchange_strong(unlatched, tid);
+    return latched;
 }
 
 template <typename tuple, typename delta>
@@ -107,7 +107,8 @@ mvcc_record<tuple, delta>::read_record(
     set_read_timestamp(context);
 
     for (auto delta_record = begin(); delta_record != end(); delta_record++) {
-        if ((*delta_record)->can_read(context)) {
+        if ((*delta_record)->is_visible(context) &&
+            (*delta_record)->can_read(context)) {
             reader(*result, delta_record->get_data());
             delta_record->set_read_timestamp(context);
         } else {
@@ -212,8 +213,10 @@ template <typename tuple, typename delta>
 bool mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record* delta_record, const transaction_context& context)
 {
-    BITCOIN_ASSERT_MSG(!get_latch_for_write(context),
-        "Failed to latch record for update");
+    if(!get_latch_for_write(context)) {
+        std::cerr << "Failed to latch record for update" << std::endl;
+        return false;
+    }
 
     // install delta
     if (!delta_record->install(context)) {
@@ -271,6 +274,12 @@ template <typename tuple, typename delta>
 mvcc_column mvcc_record<tuple, delta>::get_end_timestamp() const
 {
     return end_timestamp_;
+}
+
+template <typename tuple, typename delta>
+void mvcc_record<tuple, delta>::set_end_timestamp(const timestamp_t ts)
+{
+    end_timestamp_ = ts;
 }
 
 template <typename tuple, typename delta>

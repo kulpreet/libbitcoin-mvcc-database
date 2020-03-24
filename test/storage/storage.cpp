@@ -335,4 +335,132 @@ BOOST_AUTO_TEST_CASE(storage__multple_inserts_updates_reads__different_contexts_
   }
 }
 
+BOOST_AUTO_TEST_CASE(storage__insert_abort__remains_latched__success)
+{
+  const uint64_t size_limit = 1;
+  const uint64_t reuse_limit = 1;
+  const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+
+  store<block_mvcc_record> instance{block_store};
+
+  transaction_manager manager;
+  auto context = manager.begin_transaction();
+  block_mvcc_record record(context);
+  auto record_slot = instance.insert(context, record);
+
+  // We need to install the records next, and set the abort actions
+  auto record_bytes = record_slot.get_bytes();
+  auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
+  record_ptr->install(context);
+  context.register_commit_action([record_ptr, context]()
+  {
+      // commit to context timestamp
+      record_ptr->commit(context, context.get_timestamp());
+  });
+
+  BOOST_CHECK(record_ptr->get_next() == block_mvcc_record::no_next);
+
+  // Abort thethe transaction
+  context.abort();
+
+  // test record timestamps
+  BOOST_CHECK(record_ptr->get_begin_timestamp() == context.get_timestamp());
+  BOOST_CHECK(record_ptr->get_end_timestamp() == context.get_timestamp());
+  BOOST_CHECK(record_ptr->get_read_timestamp() == none_read);
+
+  // record remains latched as the transaction aborted instead of
+  // committing
+  BOOST_CHECK(record_ptr->is_latched_by(context));
+}
+
+BOOST_AUTO_TEST_CASE(storage__update_abort__undo__success)
+{
+  const uint64_t size_limit = 1;
+  const uint64_t reuse_limit = 1;
+  const block_pool_ptr block_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+
+  store<block_mvcc_record> instance{block_store};
+
+  transaction_manager manager;
+  auto context = manager.begin_transaction();
+  block_mvcc_record record(context);
+  BOOST_CHECK_EQUAL(record.get_data().state, 0);
+  auto record_slot = instance.insert(context, record);
+
+  // We need to install the records next, and set the commit actions
+  auto record_bytes = record_slot.get_bytes();
+  auto record_ptr = reinterpret_cast<block_mvcc_record*>(record_bytes);
+  record_ptr->install(context);
+  context.register_commit_action([record_ptr, context]()
+  {
+      // commit to context timestamp
+      record_ptr->commit(context, context.get_timestamp());
+  });
+
+  BOOST_CHECK(record_ptr->get_next() == block_mvcc_record::no_next);
+
+  BOOST_CHECK_EQUAL(record_ptr->get_data().state, 0);
+  auto read_result = instance.read(record_slot, context, block_tuple::read_from_delta);
+  BOOST_REQUIRE_EQUAL(read_result->state, 0);
+
+  // End creating head record
+  context.commit();
+
+  // delta storage
+  const block_pool_ptr delta_store = std::make_shared<block_pool>(size_limit, reuse_limit);
+  store<block_delta_mvcc_record> instance2{delta_store};
+
+  auto context2 = manager.begin_transaction();
+
+  // use constructor, will give us a latched record
+  block_delta_mvcc_record delta_record(context2);
+  delta_record.get_data().state = 1;
+  auto delta_slot = instance2.insert(context2, delta_record);
+
+  auto delta_bytes = delta_slot.get_bytes();
+  auto delta_ptr = reinterpret_cast<block_mvcc_record::delta_mvcc_record*>(delta_bytes);
+
+  // register abort action only for record as delta is an insert that
+  // will be cleared out by garbage collector
+  auto end_ts = record_ptr->get_end_timestamp();
+  context2.register_abort_action([record_ptr, context2, end_ts]()
+  {
+      // reset end timestamp and release latch, that is what commit does
+      record_ptr->commit(context2, end_ts);
+  });
+
+  BOOST_REQUIRE(record_ptr->install_next_version(delta_ptr, context2));
+  BOOST_REQUIRE(record_ptr->get_next() != block_mvcc_record::no_next);
+  BOOST_REQUIRE(record_ptr->is_latched_by(context2));
+
+  context.register_commit_action([delta_ptr, context]()
+  {
+      // commit to infinity
+      delta_ptr->commit(context);
+  });
+
+  context.register_commit_action([record_ptr, context]()
+  {
+      // commit to context timestamp
+      record_ptr->commit(context, context.get_timestamp());
+  });
+
+  // Next we commit the transaction
+  context2.abort();
+
+  // test record timestamps
+  BOOST_REQUIRE_EQUAL(record_ptr->get_begin_timestamp(), context.get_timestamp());
+  BOOST_REQUIRE_EQUAL(record_ptr->get_end_timestamp(), context.get_timestamp());
+  // we read it to test state was 0
+  BOOST_REQUIRE_EQUAL(record_ptr->get_read_timestamp(), context.get_timestamp());
+  BOOST_REQUIRE(!record_ptr->is_latched_by(context));
+  BOOST_REQUIRE(!record_ptr->is_latched_by(context2));
+
+  // Then we read the records using the slot returned from first
+  // insert and verify that the update is not readable
+  auto context3 = manager.begin_transaction();
+  read_result = instance.read(record_slot, context3, block_tuple::read_from_delta);
+  BOOST_REQUIRE_EQUAL(read_result->state, 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
