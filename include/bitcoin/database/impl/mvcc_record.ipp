@@ -36,6 +36,13 @@ template <typename tuple, typename delta>
 const typename mvcc_record<tuple, delta>::tuple_ptr
 mvcc_record<tuple, delta>::not_found = std::make_shared<tuple>();
 
+template <typename tuple, typename delta>
+mvcc_record<tuple, delta>::mvcc_record(
+    typename mvcc_record<tuple, delta>::tuple_ptr data)
+    : data_(*data)
+{
+}
+
 // Construct the master record for mvcc list.
 // Set it so that it is locked by creating tx context.
 // Set begin timestamp is set to passed context's tx id
@@ -45,6 +52,16 @@ mvcc_record<tuple, delta>::mvcc_record(
     const transaction_context& tx_context)
     : read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
       end_timestamp_(infinity), data_(tuple()), next_(no_next)
+{
+    txn_id_.store(tx_context.get_timestamp());
+}
+
+template <typename tuple, typename delta>
+mvcc_record<tuple, delta>::mvcc_record(
+    const transaction_context& tx_context,
+    typename mvcc_record<tuple, delta>::tuple_ptr data)
+    : read_timestamp_(none_read), begin_timestamp_(tx_context.get_timestamp()),
+      end_timestamp_(infinity), data_(*data), next_(no_next)
 {
     txn_id_.store(tx_context.get_timestamp());
 }

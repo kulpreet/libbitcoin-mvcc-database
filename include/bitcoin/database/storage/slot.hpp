@@ -31,6 +31,7 @@ namespace storage {
 class slot
 {
 public:
+
     /**
      * Constructs an empty tuple slot (uninitialized)
      */

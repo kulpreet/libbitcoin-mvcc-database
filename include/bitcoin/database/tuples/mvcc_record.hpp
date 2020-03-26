@@ -52,6 +52,7 @@ template <typename tuple, typename delta>
 class mvcc_record {
 public:
     typedef std::shared_ptr<tuple> tuple_ptr;
+    typedef std::shared_ptr<const tuple> const_tuple_ptr;
     typedef std::shared_ptr<delta> delta_ptr;
     typedef mvcc_record<delta, delta> delta_mvcc_record;
     typedef std::shared_ptr<delta_mvcc_record> delta_mvcc_record_ptr;
@@ -65,7 +66,14 @@ public:
 
     // constructors
     mvcc_record() = default;
+
+    // same as default constructor, but sets the data
+    mvcc_record(tuple_ptr);
+
     mvcc_record(const transaction_context&);
+
+    // sets the data
+    mvcc_record(const transaction_context&, tuple_ptr);
 
     // Return a tuple with attributes set from the delta records.
     // Finds version that is readable by context and sets
