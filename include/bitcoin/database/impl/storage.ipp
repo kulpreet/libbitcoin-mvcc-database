@@ -36,9 +36,9 @@ store<record>::store(const block_pool_ptr pool)
     blocks_latch_ = std::make_shared<spinlatch>();
     if (block_pool_ != nullptr)
     {
-        raw_block* new_block = get_new_block();
         record_size_ = sizeof(record);
         num_slots_in_block_ = BLOCK_SIZE / record_size_;
+        raw_block* new_block = get_new_block();
         // insert block
         blocks_.push_back(new_block);
     }
