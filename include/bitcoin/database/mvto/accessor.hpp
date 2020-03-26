@@ -54,9 +54,10 @@ public:
 
     // Reads from slot, following all the versions to return final
     // resolved value
-    bool get(transaction_context&, slot&, mvcc_tuple*);
+    typename mvcc_tuple::tuple_ptr get(transaction_context&, slot&,
+        typename mvcc_tuple::reader);
 
-private:
+  private:
     tuple_store_ptr tuple_store_;
     delta_store_ptr delta_store_;
 };

@@ -183,11 +183,8 @@ store<record>::read(const slot& from, const transaction_context& context,
     auto bytes = from.get_bytes();
     auto ptr = reinterpret_cast<record*>(bytes);
 
-    // get the record obtained
-    auto result = ptr->read_record(context, read_with);
-
-    // return the obtained record
-    return result;
+    // return the record obtained by reading the version chain
+    return ptr->read_record(context, read_with);
 }
 
 // We don't check if the block is full or not, we just move forward

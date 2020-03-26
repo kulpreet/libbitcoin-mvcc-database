@@ -51,8 +51,7 @@ BOOST_AUTO_TEST_CASE(accessor__constructor____success)
     block_mvto_accessor instance{block_store_ptr, delta_store_ptr};
 }
 
-// heard is the first record in the O2N version chain
-BOOST_AUTO_TEST_CASE(accessor__put__head_record__success)
+BOOST_AUTO_TEST_CASE(accessor__put_then_get__head_record__success)
 {
     const uint64_t size_limit = 1;
     const uint64_t reuse_limit = 1;
@@ -71,10 +70,13 @@ BOOST_AUTO_TEST_CASE(accessor__put__head_record__success)
     auto context = manager.begin_transaction();
 
     auto record_data = std::make_shared<block_tuple>();
-    record_data->height = 0;
+    record_data->height = 1010;
 
     auto result = instance.put(context, record_data);
     BOOST_CHECK(result);
+
+    auto read_result = instance.get(context, result, block_tuple::read_from_delta);
+    BOOST_CHECK_EQUAL(read_result->height, 1010);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
