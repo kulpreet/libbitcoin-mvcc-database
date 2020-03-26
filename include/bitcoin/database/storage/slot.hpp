@@ -32,10 +32,15 @@ class slot
 {
 public:
 
+    static const uintptr_t uninitialized = 0;
+
     /**
      * Constructs an empty tuple slot (uninitialized)
      */
-    slot() = default;
+    slot()
+      : bytes_(uninitialized)
+    {
+    }
 
     /**
      * Construct a tuple slot representing the given offset in the given block
@@ -96,6 +101,11 @@ public:
     bool operator!=(const slot &other) const
     {
         return bytes_ != other.bytes_;
+    }
+
+    operator bool() const
+    {
+        return bytes_ != uninitialized;
     }
 
   /**

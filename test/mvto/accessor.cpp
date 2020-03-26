@@ -41,52 +41,40 @@ BOOST_AUTO_TEST_CASE(accessor__constructor____success)
     const uint64_t size_limit = 1;
     const uint64_t reuse_limit = 1;
 
-    BOOST_TEST_CHECKPOINT("1");
     const block_pool_ptr block_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
     auto block_store_ptr = std::make_shared<store<block_mvcc_record>>(block_store_pool);
 
-    BOOST_TEST_CHECKPOINT("2");
     // delta storage
     const block_pool_ptr delta_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
     auto delta_store_ptr = std::make_shared<store<block_delta_mvcc_record>>(delta_store_pool);
-    BOOST_TEST_CHECKPOINT("3");
 
-    BOOST_TEST_CHECKPOINT("calling constructor");
     block_mvto_accessor instance{block_store_ptr, delta_store_ptr};
-    BOOST_TEST_CHECKPOINT("constructor returned");
 }
 
 // heard is the first record in the O2N version chain
 BOOST_AUTO_TEST_CASE(accessor__put__head_record__success)
 {
-    BOOST_TEST_CHECKPOINT("starting put head record test");
     const uint64_t size_limit = 1;
     const uint64_t reuse_limit = 1;
 
-    BOOST_TEST_CHECKPOINT("4");
     const block_pool_ptr block_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
     auto block_store_ptr = std::make_shared<store<block_mvcc_record>>(block_store_pool);
 
-    BOOST_TEST_CHECKPOINT("5");
 
     // delta storage
     const block_pool_ptr delta_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
     auto delta_store_ptr = std::make_shared<store<block_delta_mvcc_record>>(delta_store_pool);
 
-    BOOST_TEST_CHECKPOINT("6");
     block_mvto_accessor instance{block_store_ptr, delta_store_ptr};
 
     transaction_manager manager;
     auto context = manager.begin_transaction();
-    BOOST_TEST_CHECKPOINT("7");
 
     auto record_data = std::make_shared<block_tuple>();
     record_data->height = 0;
 
-    BOOST_TEST_CHECKPOINT("calling put");
-    auto slot = instance.put(context, record_data);
-    BOOST_TEST_CHECKPOINT("put returned");
-    //BOOST_CHECK(!slot.is_uninitialized());
+    auto result = instance.put(context, record_data);
+    BOOST_CHECK(result);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
