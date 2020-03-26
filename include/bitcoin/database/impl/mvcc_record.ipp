@@ -186,18 +186,11 @@ template <typename tuple, typename delta>
 bool mvcc_record<tuple, delta>::install(
     const transaction_context &context)
 {
-    BITCOIN_ASSERT_MSG(!is_latched_by(context),
-        "Trying to install a version without latching it first");
-    auto timestamp = context.get_timestamp();
-
-    // install fails if txn id is not the same as this context
-    // timestamp
-    if (timestamp != txn_id_.load()) {
+    if (!is_latched_by(context))
         return false;
-    }
 
     // set end ts
-    end_timestamp_ = timestamp;
+    end_timestamp_ = context.get_timestamp();
     return true;
 }
 
