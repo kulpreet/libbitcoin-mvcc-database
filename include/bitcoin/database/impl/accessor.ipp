@@ -37,7 +37,7 @@ template <typename mvcc_tuple, typename mvcc_delta>
 slot accessor<mvcc_tuple, mvcc_delta>::put(transaction_context& context,
     typename mvcc_tuple::tuple_ptr tuple)
 {
-    const mvcc_tuple record(context, tuple);
+    const mvcc_tuple record{context, tuple};
     auto record_slot = tuple_store_->insert(context, record);
     auto record_bytes = record_slot.get_bytes();
     auto record_ptr = reinterpret_cast<mvcc_tuple*>(record_bytes);
@@ -67,9 +67,42 @@ slot accessor<mvcc_tuple, mvcc_delta>::put(transaction_context& context,
 
 template <typename mvcc_tuple, typename mvcc_delta>
 bool accessor<mvcc_tuple, mvcc_delta>::update(transaction_context& context,
-    slot& slot, mvcc_tuple& tuple)
+    slot& head, typename mvcc_tuple::delta_ptr delta)
 {
-    return false;
+    auto head_bytes = head.get_bytes();
+    auto head_ptr = reinterpret_cast<mvcc_tuple*>(head_bytes);
+
+    mvcc_delta delta_record{context, delta};
+
+    auto delta_slot = delta_store_->insert(context, delta_record);
+    if (!delta_slot)
+        return false;
+    auto delta_bytes = delta_slot.get_bytes();
+    auto delta_ptr = reinterpret_cast<mvcc_delta*>(delta_bytes);
+
+    if (!head_ptr->install_next_version(delta_ptr, context))
+        return false;
+
+    context.register_commit_action([delta_ptr, head_ptr, context]()
+    {
+        // commit to infinity
+        delta_ptr->commit(context);
+
+        // commit to context
+        head_ptr->commit(context, context.get_timestamp());
+    });
+
+    auto end_ts = head_ptr->get_end_timestamp();
+    auto next = head_ptr->get_next();
+    context.register_abort_action([head_ptr, context, end_ts, next]()
+    {
+        // reset end timestamp and release latch, that is what commit
+        // does
+        head_ptr->set_next(next);
+        head_ptr->commit(context, end_ts);
+    });
+
+    return true;
 }
 
 template <typename mvcc_tuple, typename mvcc_delta>

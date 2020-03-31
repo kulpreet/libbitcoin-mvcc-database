@@ -79,4 +79,46 @@ BOOST_AUTO_TEST_CASE(accessor__put_then_get__head_record__success)
     BOOST_CHECK_EQUAL(read_result->height, 1010);
 }
 
+BOOST_AUTO_TEST_CASE(accessor__get__after_update_without_commit__success)
+{
+    const uint64_t size_limit = 1;
+    const uint64_t reuse_limit = 1;
+
+    const block_pool_ptr block_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
+    auto block_store_ptr = std::make_shared<store<block_mvcc_record>>(block_store_pool);
+
+
+    // delta storage
+    const block_pool_ptr delta_store_pool = std::make_shared<block_pool>(size_limit, reuse_limit);
+    auto delta_store_ptr = std::make_shared<store<block_delta_mvcc_record>>(delta_store_pool);
+
+    block_mvto_accessor instance{block_store_ptr, delta_store_ptr};
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    /// Insert new record
+    auto record_data = std::make_shared<block_tuple>();
+    record_data->height = 1010;
+    record_data->state = 5;
+
+    auto result = instance.put(context, record_data);
+    BOOST_REQUIRE(result);
+
+    /// Update record with delta
+    auto delta_data = std::make_shared<block_tuple_delta>();
+    delta_data->state = 10;
+    std::cerr << "sending delta with state " << +(delta_data->state) << std::endl;
+
+    BOOST_REQUIRE(instance.update(context, result, delta_data));
+
+    auto read_result = instance.get(context, result, block_tuple::read_from_delta);
+    BOOST_CHECK_EQUAL(read_result->height, 1010);
+    BOOST_CHECK_EQUAL(read_result->state, 10);
+}
+
+// TODO: Read in future context (pre commit) should fail?
+// TODO: Read in future context (post commit) should succeed
+// TODO: Read in past context should fail
+
 BOOST_AUTO_TEST_SUITE_END()

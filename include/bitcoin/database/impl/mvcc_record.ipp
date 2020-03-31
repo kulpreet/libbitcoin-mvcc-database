@@ -123,6 +123,7 @@ mvcc_record<tuple, delta>::read_record(
     tuple_ptr result = std::make_shared<tuple>(data_);
     set_read_timestamp(context);
 
+
     for (auto delta_record = begin(); delta_record != end(); delta_record++) {
         if ((*delta_record)->is_visible(context) &&
             (*delta_record)->can_read(context)) {
@@ -157,7 +158,7 @@ bool mvcc_record<tuple, delta>::is_visible(
         return false;
     }
 
-    // context.timestamp is greater than begin ts
+    // can't read if context.timestamp is less than begin ts
     if (timestamp < begin_timestamp_) {
         return false;
     }
@@ -224,7 +225,6 @@ bool mvcc_record<tuple, delta>::install_next_version(
     delta_mvcc_record* delta_record, const transaction_context& context)
 {
     if(!get_latch_for_write(context)) {
-        std::cerr << "Failed to latch record for update" << std::endl;
         return false;
     }
 

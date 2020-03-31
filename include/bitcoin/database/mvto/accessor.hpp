@@ -46,11 +46,12 @@ public:
 
     accessor(tuple_store_ptr, delta_store_ptr);
 
+    // Inserts a tuple into the store.
     slot put(transaction_context&, typename mvcc_tuple::tuple_ptr);
 
-    // write mvcc_tuple as an update to head pointed by slot.
-    // creates a new version
-    bool update(transaction_context&, slot&, mvcc_tuple&);
+    // Write a delta record in the version chain pointed to by the
+    // slot.
+    bool update(transaction_context&, slot&, typename mvcc_tuple::delta_ptr);
 
     // Reads from slot, following all the versions to return final
     // resolved value
