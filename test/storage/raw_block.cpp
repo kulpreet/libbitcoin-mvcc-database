@@ -25,6 +25,15 @@ using namespace bc::database::storage;
 
 BOOST_AUTO_TEST_SUITE(raw_block_tests)
 
+BOOST_AUTO_TEST_CASE(raw_block__construct__is_aligned__success)
+{
+    // get a new block
+    block_allocator alloc{};
+    raw_block* block = alloc.allocate();
+    // set busy status, should succeed
+    BOOST_CHECK(!((static_cast<uintptr_t>(BLOCK_SIZE) - 1) & (uintptr_t)block));
+}
+
 BOOST_AUTO_TEST_CASE(raw_block__set_busy_status__not_set__success)
 {
     // get a new block

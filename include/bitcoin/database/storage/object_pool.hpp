@@ -130,8 +130,10 @@ public:
       throw no_more_object_exception(size_limit_);
     T *result = nullptr;
     if (reuse_queue_.empty()) {
-      result = alloc_.allocate(); // result could be null because the allocator may
-                             // not find enough memory space
+      result = alloc_.allocate();
+
+      // result could be null because the allocator may not find
+      // enough memory space
       if (result != nullptr)
         current_size_++;
     } else {
@@ -139,8 +141,8 @@ public:
       reuse_queue_.pop();
       alloc_.reuse(result);
     }
-    // If result is nullptr. The call to alloc_.allocate() failed (i.e. can't
-    // allocate more memory from the system).
+    // If result is nullptr. The call to alloc_.allocate() failed
+    // (i.e. can't allocate more memory from the system).
     if (result == nullptr)
       throw allocator_failure_exception();
     BITCOIN_ASSERT_MSG(current_size_ <= size_limit_,

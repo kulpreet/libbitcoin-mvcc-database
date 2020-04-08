@@ -59,6 +59,9 @@ public:
         typename mvcc_tuple::reader);
 
   private:
+    bool insert_after_head(transaction_context&, mvcc_tuple*, mvcc_delta*);
+    bool insert_after_tail(transaction_context&, mvcc_delta*, mvcc_delta*);
+
     tuple_store_ptr tuple_store_;
     delta_store_ptr delta_store_;
 };

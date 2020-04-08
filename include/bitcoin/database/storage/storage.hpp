@@ -76,6 +76,8 @@ public:
 
     raw_block* get_current_block();
 
+    record* get_bytes_at(const slot&) const;
+
 private:
 
     // get a new block from block pool
@@ -92,7 +94,7 @@ private:
     bool allocate_in(raw_block*, slot*);
 
     // insert record into slot with given transaction context.
-    void insert_into(transaction_context&, const record&, slot);
+    void insert_into(transaction_context&, const record&, const slot&);
 
     // move insertion_header forward, getting new block from pool, if
     // required

@@ -39,13 +39,10 @@ slot accessor<mvcc_tuple, mvcc_delta>::put(transaction_context& context,
 {
     const mvcc_tuple record{context, tuple};
     auto record_slot = tuple_store_->insert(context, record);
-    auto record_bytes = record_slot.get_bytes();
-    auto record_ptr = reinterpret_cast<mvcc_tuple*>(record_bytes);
+    auto record_ptr = tuple_store_->get_bytes_at(record_slot);
 
     if (!record_ptr->install(context))
-    {
         return slot{};
-    }
 
     context.register_commit_action([record_ptr, context]()
     {
@@ -66,43 +63,87 @@ slot accessor<mvcc_tuple, mvcc_delta>::put(transaction_context& context,
 }
 
 template <typename mvcc_tuple, typename mvcc_delta>
+bool accessor<mvcc_tuple, mvcc_delta>::insert_after_head(
+    transaction_context& context, mvcc_tuple* head, mvcc_delta* delta_record)
+{
+    if (!head->install_next_version(delta_record, context))
+        return false;
+
+    context.register_commit_action([delta_record, head, context]()
+    {
+        // commit to infinity
+        delta_record->commit(context);
+
+        // commit to context
+        head->commit(context, context.get_timestamp());
+    });
+
+    auto end_ts = head->get_end_timestamp();
+    auto next = head->get_next();
+    context.register_abort_action([head, context, end_ts, next]()
+    {
+        // reset end timestamp and release latch, that is what commit
+        // does
+        head->set_next(next);
+        head->commit(context, end_ts);
+    });
+
+    return true;
+}
+
+template <typename mvcc_tuple, typename mvcc_delta>
+bool accessor<mvcc_tuple, mvcc_delta>::insert_after_tail(
+    transaction_context& context, mvcc_delta* tail, mvcc_delta* delta_record)
+{
+    if (!tail->install_next_version(delta_record, context))
+        return false;
+
+    context.register_commit_action([delta_record, tail, context]()
+    {
+      // commit to infinity
+      delta_record->commit(context);
+
+      // commit to context
+      tail->commit(context, context.get_timestamp());
+    });
+
+    auto end_ts = tail->get_end_timestamp();
+    auto next = tail->get_next();
+    context.register_abort_action([tail, context, end_ts, next]()
+    {
+        // reset end timestamp and release latch, that is what commit
+        // does
+        tail->set_next(next);
+        tail->commit(context, end_ts);
+    });
+
+    return true;
+}
+
+template <typename mvcc_tuple, typename mvcc_delta>
 bool accessor<mvcc_tuple, mvcc_delta>::update(transaction_context& context,
     slot& head, typename mvcc_tuple::delta_ptr delta)
 {
-    auto head_bytes = head.get_bytes();
-    auto head_ptr = reinterpret_cast<mvcc_tuple*>(head_bytes);
+    auto head_ptr = tuple_store_->get_bytes_at(head);
 
     mvcc_delta delta_record{context, delta};
 
     auto delta_slot = delta_store_->insert(context, delta_record);
     if (!delta_slot)
         return false;
-    auto delta_bytes = delta_slot.get_bytes();
-    auto delta_ptr = reinterpret_cast<mvcc_delta*>(delta_bytes);
 
-    if (!head_ptr->install_next_version(delta_ptr, context))
+    auto delta_ptr = delta_store_->get_bytes_at(delta_slot);
+
+    if (head_ptr->begin() == head_ptr->end())
+        return insert_after_head(context, head_ptr, delta_ptr);
+
+    mvcc_delta* tail = head_ptr->find_last_delta(context);
+    if (tail == mvcc_tuple::no_next)
         return false;
 
-    context.register_commit_action([delta_ptr, head_ptr, context]()
-    {
-        // commit to infinity
-        delta_ptr->commit(context);
+    auto result = insert_after_tail(context, tail, delta_ptr);
 
-        // commit to context
-        head_ptr->commit(context, context.get_timestamp());
-    });
-
-    auto end_ts = head_ptr->get_end_timestamp();
-    auto next = head_ptr->get_next();
-    context.register_abort_action([head_ptr, context, end_ts, next]()
-    {
-        // reset end timestamp and release latch, that is what commit
-        // does
-        head_ptr->set_next(next);
-        head_ptr->commit(context, end_ts);
-    });
-
-    return true;
+    return result;
 }
 
 template <typename mvcc_tuple, typename mvcc_delta>

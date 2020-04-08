@@ -32,6 +32,14 @@ const auto BLOCK_SIZE = 1 << 20;
 // A lot of this comes from cmu db's TBD terrier project
 // https://github.com/cmu-db/terrier
 
+///////////////////////////////////////////////////////////////////////////////
+// Layout
+// insert_head_ 4 bytes
+// slot bitmap  8 bytes
+// finally the rest is for the tuple slots 1MB - 12 bytes
+///////////////////////////////////////////////////////////////////////////////
+
+
 class alignas(BLOCK_SIZE) raw_block
 {
 public:
@@ -83,9 +91,9 @@ public:
    */
   bool clear_busy_status() {
       uint32_t val = insert_head_.load();
-      if (val != set_bit(val)) {
+      if (val != set_bit(val))
           return false;
-      }
+
       return insert_head_.compare_exchange_strong(val, clear_bit(val));
   }
 

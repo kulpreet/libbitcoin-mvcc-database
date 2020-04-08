@@ -49,7 +49,9 @@ struct allocation_util {
   }
 
   /**
-   * Allocates an array of elements that start at an 8-byte aligned address
+   * Allocates an array of elements that start at an 8-byte aligned
+   * address
+   *
    * @tparam T type of element
    * @param size number of elements to allocate
    * @return allocated memory pointer
@@ -61,8 +63,10 @@ struct allocation_util {
 };
 
 /**
- * Allocator that allocates and destroys a byte array. Memory location returned by this default allocator is
- * not zeroed-out. The address returned is guaranteed to be aligned to 8 bytes.
+ * Allocator that allocates and destroys a byte array. Memory location
+ * returned by this default allocator is not zeroed-out. The address
+ * returned is guaranteed to be aligned to 8 bytes.
+ *
  * @tparam T object whose size determines the byte array size.
  */
 template <typename T>

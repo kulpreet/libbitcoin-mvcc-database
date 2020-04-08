@@ -38,6 +38,7 @@ typedef uint64_t mvcc_column;
 const uint64_t infinity = -1;
 
 // not_latched used as the sentinel to mark record is not latched.
+
 const uint64_t not_latched = 0;
 
 // No one has read this version yet.
@@ -81,6 +82,8 @@ public:
     // returns nullptr - the caller should check for this.
     tuple_ptr read_record(const transaction_context&, reader);
 
+    // bool insert_delta(const transaction_context&, delta_mvcc_record*);
+
     // sets up a new version using the transaction context and the
     // writer. This will later be installed.
     //
@@ -121,11 +124,11 @@ public:
     bool release_latch(const transaction_context&);
 
     // returns true if this tuple is visible to transaction
-    bool is_visible(const transaction_context&);
+    bool is_visible(const transaction_context&) const;
 
     // returns true if this tuple can be read by this transaction
     // check for visibility is separate
-    bool can_read(const transaction_context&);
+    bool can_read(const transaction_context&) const;
 
     mvcc_column get_read_timestamp() const;
 
@@ -141,6 +144,8 @@ public:
 
     delta_mvcc_record* get_next() const;
 
+    bool is_last() const;
+
     void set_next(delta_mvcc_record*);
 
     // Iterator definition and operators
@@ -153,6 +158,13 @@ public:
 
     // returns true if this tuple is latched by context
     bool is_latched_by(const transaction_context&) const;
+
+    timestamp_t get_txn_id() const;
+
+    // Find last version to append new version to
+    // Used by update.
+    // Returns not_found if there is a conflict
+    delta_mvcc_record* find_last_delta(const transaction_context&);
 
 private:
     // Compare and swap on txn_id_ "installs" the new version

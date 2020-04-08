@@ -30,6 +30,13 @@ using namespace bc::database::tuples;
 
 BOOST_AUTO_TEST_SUITE(mvcc_record_tests)
 
+BOOST_AUTO_TEST_CASE(mvcc_record__sizeof__head_and_delta__success)
+{
+    BOOST_CHECK_EQUAL(sizeof(block_mvcc_record), 144);
+
+    BOOST_CHECK_EQUAL(sizeof(block_delta_mvcc_record), 48);
+}
+
 BOOST_AUTO_TEST_CASE(mvcc_record__get_latch__release_latch__success)
 {
     // start transaction 1
@@ -111,7 +118,6 @@ BOOST_AUTO_TEST_CASE(mvcc_record__create_and_install_new_version_single__success
     BOOST_CHECK_EQUAL(record.get_end_timestamp(), context.get_timestamp());
 }
 
-// This test should be run once transaction commit is handled.
 BOOST_AUTO_TEST_CASE(mvcc_record__read__visible__success)
 {
     // start transaction

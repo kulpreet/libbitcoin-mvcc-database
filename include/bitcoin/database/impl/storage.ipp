@@ -70,7 +70,7 @@ raw_block* store<record>::get_current_block()
 template <typename record>
 void store<record>::initialize_raw_block(raw_block* block)
 {
-    // The fill and set insert_head_ two can go into raw_block, but we
+    // The fill and set insert_head_ too can go into raw_block, but we
     // are avoiding adding methods to it.
     memset(block->content_, 0, BLOCK_SIZE - sizeof(uint32_t));
     block->insert_head_ = 0;
@@ -152,9 +152,20 @@ slot store<record>::insert(transaction_context& context,
 }
 
 template <typename record>
+record* store<record>::get_bytes_at(const slot& slot) const
+{
+    // skip the insert head to and slot bitmap
+    return reinterpret_cast<record *>(
+        reinterpret_cast<uintptr_t>(slot.get_block())
+        + sizeof(uint32_t) // insert_head_
+        + sizeof(uint64_t) // slot bitmap
+        + (slot.get_offset() * sizeof(record)));
+}
+
+template <typename record>
 bool store<record>::allocate_in(raw_block* block, slot* use_slot)
 {
-    raw_concurrent_bitmap *bitmap =  get_slot_bitmap(block);
+    raw_concurrent_bitmap *bitmap = get_slot_bitmap(block);
     const uint32_t start = block->get_insert_head();
 
     // We are not allowed to insert into this block any more
@@ -180,8 +191,7 @@ store<record>::read(const slot& from, const transaction_context& context,
     typename record::reader read_with) const
 {
     // Get mvcc record from memory pointed to by slot
-    auto bytes = from.get_bytes();
-    auto ptr = reinterpret_cast<record*>(bytes);
+    auto ptr = get_bytes_at(from);
 
     // return the record obtained by reading the version chain
     return ptr->read_record(context, read_with);
@@ -193,32 +203,30 @@ void store<record>::check_move_head(std::list<raw_block *>::iterator block_iter)
 {
     scopedspinlatch guard_head(insert_head_latch_);
   if (block_iter == insertion_head_)
-  {
       // move the insertion head to point to the next block
-    insertion_head_++;
-  }
+      insertion_head_++;
 
   // If there are no more free blocks, create a new empty block and
   // point the insertion_head to it
   if (insertion_head_ == blocks_.end())
   {
       raw_block *new_block = get_new_block();
-    // take latch
-    scopedspinlatch guard_block(blocks_latch_);
-    // insert block
-    blocks_.push_back(new_block);
-    // set insertion header to --end()
-    insertion_head_ = --blocks_.end();
+      // take latch
+      scopedspinlatch guard_block(blocks_latch_);
+      // insert block
+      blocks_.push_back(new_block);
+      // set insertion header to --end()
+      insertion_head_ = --blocks_.end();
   }
 }
 
 template <typename record>
 void store<record>::insert_into(transaction_context& context,
-    const record& to_insert, slot use_slot)
+    const record& to_insert, const slot& use_slot)
 {
     // type case slot into record, so we can use latch/commit methods.
-    auto location = use_slot.get_bytes();
-    auto destination = new (reinterpret_cast<record*>(location)) record{};
+    auto location = get_bytes_at(use_slot);
+    auto destination = new (location) record{};
 
     // get latch on record
     destination->get_latch_for_write(context);

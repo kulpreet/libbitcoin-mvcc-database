@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(block_tuple__sizeof__returns_128__success)
     BOOST_REQUIRE_EQUAL(result, 104);
 
     auto delta_result = sizeof(block_tuple_delta);
-    BOOST_REQUIRE_EQUAL(delta_result, 1);
+    BOOST_REQUIRE_EQUAL(delta_result, 8);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

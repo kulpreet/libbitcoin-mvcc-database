@@ -38,14 +38,17 @@ using namespace system;
  * When writing an update, the older values are copied to delta store
  * and the master tuple is updated in place.
  */
-class block_tuple_delta {
+class alignas(8) block_tuple_delta {
 public:
     // 1 byte
     uint8_t state;
 
     static const uint8_t not_found_ = -1;
 
-    block_tuple_delta() : state(not_found_){};
+    block_tuple_delta()
+      : state(not_found_)
+    {
+    }
 
     bool operator==(block_tuple_delta& other)
     {

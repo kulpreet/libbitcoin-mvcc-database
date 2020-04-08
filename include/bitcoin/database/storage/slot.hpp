@@ -51,17 +51,10 @@ public:
         : bytes_(reinterpret_cast<uintptr_t>(block) | offset)
     {
         BITCOIN_ASSERT_MSG(
-            !((static_cast<uintptr_t>(BLOCK_SIZE) - 1) &
-                ((uintptr_t)block)),
+            !((static_cast<uintptr_t>(BLOCK_SIZE) - 1) & ((uintptr_t)block)),
             "Address must be aligned to block size (last bits zero).");
         BITCOIN_ASSERT_MSG(offset < BLOCK_SIZE,
             "Offset must be smaller than block size (to fit in the last bits).");
-    }
-
-    // get memory identified by this slot
-    uintptr_t get_bytes() const
-    {
-        return bytes_;
     }
 
     /**
@@ -115,7 +108,8 @@ public:
    * @return the modified output stream.
    */
   friend std::ostream &operator<<(std::ostream &os, const slot &slot) {
-      return os << "block: " << slot.get_block() << ", offset: " << slot.get_offset();
+      return os << "block: " << slot.get_block() << ", offset: " << std::hex
+                << slot.get_offset();
   }
 
 private:
