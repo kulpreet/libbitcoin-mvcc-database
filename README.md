@@ -6,6 +6,12 @@ Uses cmake. Requires libbitcoin-system.
 `PKG_CONFIG_PATH=path/to/libbitcoin-system/lib/pkgconfig/ cmake -DCMAKE_BUILD_TYPE=Release|Debug ../`
 `make && make test`
 
+## Requirements
+
+We need c++17 to enable `alignas` for use in raw memory block pool. I
+couldn't make `class alignas(1 << 20) raw_block` work on c++11 or
+c++14. Using jemalloc didn't help either.
+
 # Goals
 
 1. In memory multi version concurrency control.
