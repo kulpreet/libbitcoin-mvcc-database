@@ -250,7 +250,6 @@ BOOST_AUTO_TEST_CASE(accessor__get__in_old_context_after_update_with_commit__suc
     BOOST_CHECK_EQUAL(read_result, block_mvcc_record::not_found);
 }
 
-// TODO: Create version chain with three deltas - read third version
 BOOST_AUTO_TEST_CASE(accessor__get__third_version__success)
 {
     const uint64_t size_limit = 10;
