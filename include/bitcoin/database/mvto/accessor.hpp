@@ -56,7 +56,7 @@ public:
     // Reads from slot, following all the versions to return final
     // resolved value
     typename mvcc_tuple::tuple_ptr get(transaction_context&, slot&,
-        typename mvcc_tuple::reader);
+        typename mvcc_tuple::reader) const;
 
   private:
     bool insert_after_head(transaction_context&, mvcc_tuple*, mvcc_delta*);

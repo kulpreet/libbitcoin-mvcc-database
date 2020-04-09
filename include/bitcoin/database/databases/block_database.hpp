@@ -25,9 +25,9 @@
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
 
-#include <bitcoin/database/storage/storage.hpp>
 #include <bitcoin/database/mvto/accessor.hpp>
-
+#include <bitcoin/database/storage/storage.hpp>
+#include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
 #include <bitcoin/database/tuples/block_tuple_delta.hpp>
 #include <bitcoin/database/tuples/mvcc_record.hpp>
@@ -94,13 +94,16 @@ public:
     bool top(size_t& out_height, bool candidate) const;
 
     // /// Fetch block by block|header index height.
-    block_tuple_ptr get(size_t height, bool candidate) const;
+    block_tuple_ptr get(transaction_context& context, size_t height,
+        bool candidate) const;
 
     // /// Fetch block by hash.
-    block_tuple_ptr get(const system::hash_digest& hash) const;
+    block_tuple_ptr get(transaction_context& context,
+        const system::hash_digest& hash) const;
 
     /// Populate header metadata for the given header.
-    void get_header_metadata(const system::chain::header& header) const;
+    void get_header_metadata(transaction_context& context,
+        const system::chain::header& header) const;
 
     // Writers.
     // ------------------------------------------------------------------------
@@ -108,7 +111,8 @@ public:
     /// Store header, validated at height, candidate, pending (but
     /// unindexed).
     /// Return memory location where data is stored and null_ptr on error.
-    block_tuple_ptr store(const system::chain::header& header,
+    bool store(transaction_context& context,
+        const system::chain::header& header,
         const size_t height, const uint32_t median_time_past,
         const uint32_t checksum, const uint8_t state);
 

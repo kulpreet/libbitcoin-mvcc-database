@@ -49,41 +49,67 @@ bool block_database::top(size_t& out_height, bool candidate) const
     return true;
 }
 
-// // block_tuple_ptr block_database::store(const system::chain::header& header,
-// //     const size_t height, const uint32_t median_time_past,
-// //     const uint32_t checksum, const uint8_t state)
-// // {
-// //     // // get memory using the memory store
-// //     // auto memory_ptr = master_memory_store_.allocate();
+bool block_database::store(transaction_context& context,
+    const system::chain::header& header,
+    const size_t height, const uint32_t median_time_past,
+    const uint32_t checksum, const uint8_t state)
+{
+    auto data = std::make_shared<block_tuple>();
+    // set header data
+    data->previous_block_hash = header.previous_block_hash();
+    data->merkle_root = header.merkle_root();
+    data->version = header.version();
+    data->timestamp = header.timestamp();
+    data->bits = header.bits();
+    data->nonce = header.nonce();
 
-// //     // if (memory_ptr == nullptr)
-// //     //     return nullptr;
+    // set block data
+    data->height = height;
+    data->median_time_past = median_time_past;
+    data->checksum = checksum;
+    data->state = state;
 
-// //     // // set header data
-// //     // memory_ptr->previous_block_hash = header.previous_block_hash();
-// //     // memory_ptr->merkle_root = header.merkle_root();
-// //     // memory_ptr->version = header.version();
-// //     // memory_ptr->timestamp = header.timestamp();
-// //     // memory_ptr->bits = header.bits();
-// //     // memory_ptr->nonce = header.nonce();
+    auto result_slot = accessor_.put(context, data);
 
-// //     // // set block data
-// //     // memory_ptr->height = height;
-// //     // memory_ptr->median_time_past = median_time_past;
-// //     // memory_ptr->checksum = checksum;
-// //     // memory_ptr->state = state;
+    if (!result_slot)
+        return false;
 
-// //     // hash_digest_index_.insert(header.hash(), memory_ptr);
-// //     // return memory_ptr;
-// // }
+    hash_digest_index_.insert(header.hash(), result_slot);
+    return true;
+}
 
-// // // Find the block from the hash_digest index and
-// // // find the readable version for the transaction timestamp
-// // block_tuple_ptr block_database::get(const system::hash_digest& hash) const
-// // {
-// //     // auto block_tuple = hash_digest_index_.find(hash);
-// //     // return block_tuple;
-// // }
+// Find the slot from the hash_digest index and
+// find the readable version for the transaction timestamp
+block_tuple_ptr block_database::get(transaction_context& context,
+    const system::hash_digest& hash) const
+{
+    try
+    {
+        auto at_slot = hash_digest_index_.find(hash);
+        return accessor_.get(context, at_slot, block_tuple::read_from_delta);
+    }
+    catch (std::out_of_range e)
+    {
+        return nullptr;
+    }
+}
+
+// Find the slot from the candidate|confirmed index and
+// find the readable version for the transaction timestamp
+block_tuple_ptr block_database::get(transaction_context& context,
+    size_t height, bool candidate) const
+{
+    auto index = candidate ? candidate_index_ : confirmed_index_;
+    try
+    {
+        auto at_slot = index.find(height);
+        return accessor_.get(context, at_slot, block_tuple::read_from_delta);
+    }
+    catch (std::out_of_range e)
+    {
+        return nullptr;
+    }
+}
 
 // // // Find block from block hash index and then update it.
 // // // The update won't be visible until the transaction is committed

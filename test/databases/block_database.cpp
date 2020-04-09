@@ -19,6 +19,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include <bitcoin/system.hpp>
+#include <bitcoin/database/transaction_management/transaction_manager.hpp>
+#include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
 #include <bitcoin/database/databases/block_database.hpp>
 
@@ -48,25 +50,29 @@ BOOST_AUTO_TEST_CASE(block_database__constructor__smoke_test__success)
     BOOST_CHECK_EQUAL(instance.top(height, false), 0);
 }
 
-// BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
-// {
-//     block_tuple_memory_store memory_store;
-//     block_database instance(memory_store);
+BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
+{
+    static const auto settings = system::settings(system::config::settings::mainnet);
+    chain::block block0 = settings.genesis_block;
+    block0.set_transactions(
+    {
+       random_tx(0),
+       random_tx(1)
+    });
 
-//     static const auto settings = system::settings(system::config::settings::mainnet);
-//     chain::block block0 = settings.genesis_block;
-//     block0.set_transactions(
-//     {
-//        random_tx(0),
-//        random_tx(1)
-//     });
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
 
-//     auto from_store = instance.store(block0.header(), 100, 1, 100, 0);
-//     BOOST_REQUIRE(from_store->previous_block_hash == block0.header().previous_block_hash());
-//     BOOST_REQUIRE(from_store->height == 100);
+    block_database instance{10, 1, 10, 1};
 
-//     auto from_index = instance.get(block0.header().hash());
-//     BOOST_REQUIRE_EQUAL(from_index, from_store);
-// }
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, 1));
+
+    auto from_index = instance.get(context, block0.header().hash());
+    BOOST_REQUIRE(from_index->merkle_root == block0.header().merkle_root());
+
+    // block is not promoted yet, so not in candidate or confirmed indexes
+    from_index = instance.get(context, 0, true);
+    BOOST_REQUIRE(from_index == nullptr);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

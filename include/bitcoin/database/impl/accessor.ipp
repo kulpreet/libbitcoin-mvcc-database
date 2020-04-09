@@ -149,7 +149,7 @@ bool accessor<mvcc_tuple, mvcc_delta>::update(transaction_context& context,
 template <typename mvcc_tuple, typename mvcc_delta>
 typename mvcc_tuple::tuple_ptr
 accessor<mvcc_tuple, mvcc_delta>::get(transaction_context& context,
-    slot& from, typename mvcc_tuple::reader reader)
+    slot& from, typename mvcc_tuple::reader reader) const
 {
     return tuple_store_->read(from, context, reader);
 }
