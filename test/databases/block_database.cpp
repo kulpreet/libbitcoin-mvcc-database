@@ -140,6 +140,53 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate_then_confirmed__success)
     BOOST_CHECK_EQUAL(reloaded->state, block_state::confirmed);
 }
 
+BOOST_AUTO_TEST_CASE(block_database__demote__candidate__success)
+{
+    static const auto settings = system::settings(system::config::settings::mainnet);
+    chain::block block0 = settings.genesis_block;
+    block0.set_transactions(
+    {
+       random_tx(0),
+       random_tx(1)
+    });
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    block_database instance{10, 1, 10, 1};
+
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
+
+    // Setup by promoting
+    BOOST_REQUIRE(instance.promote(context, block0.header().hash(), 0, true));
+
+    size_t height = -1;
+    BOOST_CHECK(instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, 0);
+
+    auto reloaded = instance.get(context, block0.header().hash());
+    BOOST_CHECK_EQUAL(reloaded->state, block_state::candidate);
+
+    // Run test
+    BOOST_REQUIRE(instance.demote(context, block0.header().hash(), 0, true));
+
+    context.commit();
+
+    // the call to top will abort the context, undoing demote
+    context = manager.begin_transaction();
+
+    // Check conditions
+    height = -1;
+    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, -1);
+
+    // start new context to `get` as top aborted earlier context
+    context = manager.begin_transaction();
+
+    reloaded = instance.get(context, block0.header().hash());
+    BOOST_CHECK_EQUAL(reloaded->state, 0);
+}
+
 BOOST_AUTO_TEST_CASE(block_database__get_header_metadata__smoke_test__success)
 {
     static const auto settings = system::settings(system::config::settings::mainnet);
