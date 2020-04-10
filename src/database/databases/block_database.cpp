@@ -109,6 +109,48 @@ block_tuple_ptr block_database::get(transaction_context& context,
     }
 }
 
+static uint8_t update_validation_state(uint8_t original, bool positive)
+{
+    // May only validate or invalidate an unvalidated block.
+    BITCOIN_ASSERT(!is_failed(original) && !is_valid(original));
+
+    // Preserve the confirmation state.
+    const auto confirmation_state = original & block_state::confirmations;
+    const auto validation_state = positive ? block_state::valid :
+        block_state::failed;
+
+    // Merge the new validation state with existing confirmation state.
+    return confirmation_state | validation_state;
+}
+
+static uint8_t update_confirmation_state(uint8_t original, bool positive,
+    bool candidate)
+{
+    // May only confirm a valid block.
+    BITCOIN_ASSERT(!positive || candidate || is_valid(original));
+
+    // May only unconfirm a confirmed block.
+    BITCOIN_ASSERT(positive || candidate || is_confirmed(original));
+
+    // May only candidate an unfailed block.
+    BITCOIN_ASSERT(!positive || !candidate || !is_failed(original));
+
+    // May only uncandidate a candidate header.
+    BITCOIN_ASSERT(positive || !candidate || is_candidate(original));
+
+    // Preserve the validation state (header-indexed blocks can be pent).
+    const auto validation_state = original & block_state::validations;
+    const auto positive_state = candidate ? block_state::candidate :
+        block_state::confirmed;
+
+    // Deconfirmation is always directly to the pooled state.
+    const auto confirmation_state = positive ? positive_state :
+        block_state::missing;
+
+    // Merge the new confirmation state with existing validation state.
+    return confirmation_state | validation_state;
+}
+
 // Find the slot from the candidate|confirmed index and
 // find the readable version for the transaction timestamp
 block_tuple_ptr block_database::get(transaction_context& context,
@@ -133,18 +175,34 @@ bool block_database::promote(transaction_context& context,
     const system::hash_digest &hash, size_t height,
     bool candidate)
 {
+    block_tuple_ptr read_block;
+    slot at_slot;
+
     try
     {
-        auto slot = hash_digest_index_->find(hash);
-        auto index = candidate ? candidate_index_ : confirmed_index_;
-        auto result = index->insert(height, slot);
-        return result;
+        hash_digest_index_->find(hash, at_slot);
+        read_block = accessor_.get(context, at_slot, block_tuple::read_from_delta);
     }
     catch (std::out_of_range e)
     {
         context.abort();
         return false;
     }
+
+    auto original = read_block->state;
+    const auto updated_state = update_confirmation_state(original, true, candidate);
+
+    auto delta_data = std::make_shared<block_tuple_delta>();
+    delta_data->state = updated_state;
+    if (!accessor_.update(context, at_slot, delta_data))
+    {
+        context.abort();
+        return false;
+    }
+
+    auto index = candidate ? candidate_index_ : confirmed_index_;
+    auto result = index->insert(height, at_slot);
+    return result;
 }
 
 code block_database::get_error(block_tuple_ptr block) const
@@ -170,6 +228,37 @@ void block_database::get_header_metadata(transaction_context& context,
     // header.metadata.populated = transaction_count() != 0;
     header.metadata.median_time_past = read_block->median_time_past;
 }
+
+bool block_database::validate(transaction_context& context,
+    const system::hash_digest& hash, const system::code& error)
+{
+    block_tuple_ptr read_block;
+    slot at_slot;
+
+    try
+    {
+        hash_digest_index_->find(hash, at_slot);
+        read_block = accessor_.get(context, at_slot, block_tuple::read_from_delta);
+    }
+    catch (std::out_of_range e)
+    {
+        context.abort();
+        return false;
+    }
+
+    auto original = read_block->state;
+    const auto updated_state = update_validation_state(original, !error);
+
+    auto delta_data = std::make_shared<block_tuple_delta>();
+    delta_data->state = updated_state;
+    if (!accessor_.update(context, at_slot, delta_data))
+    {
+        context.abort();
+        return false;
+    }
+    return true;
+}
+
 
 } // namespace database
 } // namespace libbitcoin

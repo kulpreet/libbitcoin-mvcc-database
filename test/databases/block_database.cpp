@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
     BOOST_CHECK_EQUAL(height, -1);
 }
 
-BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
+BOOST_AUTO_TEST_CASE(block_database__promote__candidate_then_confirmed__success)
 {
     static const auto settings = system::settings(system::config::settings::mainnet);
     chain::block block0 = settings.genesis_block;
@@ -110,6 +110,8 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
     block_database instance{10, 1, 10, 1};
 
     BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
+
+    // Candidate
     BOOST_REQUIRE(instance.promote(context, block0.header().hash(), 0, true));
 
     size_t height = -1;
@@ -119,6 +121,23 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
     height = -1;
     BOOST_CHECK(!instance.top(context, height, false));
     BOOST_CHECK_EQUAL(height, -1);
+
+    auto reloaded = instance.get(context, block0.header().hash());
+    BOOST_CHECK_EQUAL(reloaded->state, block_state::candidate);
+
+    // Confirm
+    BOOST_REQUIRE(instance.promote(context, block0.header().hash(), 0, false));
+
+    height = -1;
+    BOOST_CHECK(instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, 0);
+
+    height = -1;
+    BOOST_CHECK(instance.top(context, height, false));
+    BOOST_CHECK_EQUAL(height, 0);
+
+    reloaded = instance.get(context, block0.header().hash());
+    BOOST_CHECK_EQUAL(reloaded->state, block_state::confirmed);
 }
 
 BOOST_AUTO_TEST_CASE(block_database__get_header_metadata__smoke_test__success)
@@ -145,6 +164,30 @@ BOOST_AUTO_TEST_CASE(block_database__get_header_metadata__smoke_test__success)
     BOOST_REQUIRE(!block0.header().metadata.validated);
     BOOST_REQUIRE(block0.header().metadata.candidate);
     BOOST_REQUIRE(!block0.header().metadata.confirmed);
+}
+
+BOOST_AUTO_TEST_CASE(block_database__validate__from_candidate__success)
+{
+    static const auto settings = system::settings(system::config::settings::mainnet);
+    chain::block block0 = settings.genesis_block;
+    block0.set_transactions(
+    {
+       random_tx(0),
+       random_tx(1)
+    });
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    block_database instance{10, 1, 10, 1};
+
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
+
+    // Validate
+    BOOST_REQUIRE(instance.validate(context, block0.header().hash(), error::success));
+
+    auto reloaded = instance.get(context, block0.header().hash());
+    BOOST_CHECK_EQUAL(reloaded->state, block_state::valid | block_state::candidate);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
