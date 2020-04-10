@@ -150,9 +150,9 @@ private:
     // in the same transaction.
 
     // indexes
-    height_index_map candidate_index_;
-    height_index_map confirmed_index_;
-    hash_digest_index_map hash_digest_index_;
+    std::shared_ptr<height_index_map> candidate_index_;
+    std::shared_ptr<height_index_map> confirmed_index_;
+    std::shared_ptr<hash_digest_index_map> hash_digest_index_;
 };
 
 } // namespace database

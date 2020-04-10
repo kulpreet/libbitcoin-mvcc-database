@@ -36,7 +36,10 @@ block_database::block_database(uint64_t block_size_limit,
       block_store_(std::make_shared<storage::store<block_mvcc_record>>(block_store_pool_)),
       delta_store_pool_(std::make_shared<block_pool>(delta_size_limit, delta_reuse_limit)),
       delta_store_(std::make_shared<storage::store<block_delta_mvcc_record>>(delta_store_pool_)),
-      accessor_(block_mvto_accessor{block_store_, delta_store_})
+      accessor_(block_mvto_accessor{block_store_, delta_store_}),
+      candidate_index_(std::make_shared<height_index_map>()),
+      confirmed_index_(std::make_shared<height_index_map>()),
+      hash_digest_index_(std::make_shared<hash_digest_index_map>())
 {
 }
 
@@ -44,7 +47,7 @@ bool block_database::top(transaction_context& context, size_t& out_height,
     bool candidate) const
 {
     auto index = candidate ? candidate_index_ : confirmed_index_;
-    auto size = index.size();
+    auto size = index->size();
 
     if (size == 0)
     {
@@ -84,7 +87,7 @@ bool block_database::store(transaction_context& context,
         return false;
     }
 
-    hash_digest_index_.insert(header.hash(), result_slot);
+    hash_digest_index_->insert(header.hash(), result_slot);
     return true;
 }
 
@@ -95,7 +98,7 @@ block_tuple_ptr block_database::get(transaction_context& context,
 {
     try
     {
-        auto at_slot = hash_digest_index_.find(hash);
+        auto at_slot = hash_digest_index_->find(hash);
         return accessor_.get(context, at_slot, block_tuple::read_from_delta);
     }
     catch (std::out_of_range e)
@@ -113,7 +116,7 @@ block_tuple_ptr block_database::get(transaction_context& context,
     auto index = candidate ? candidate_index_ : confirmed_index_;
     try
     {
-        auto at_slot = index.find(height);
+        auto at_slot = index->find(height);
         return accessor_.get(context, at_slot, block_tuple::read_from_delta);
     }
     catch (std::out_of_range e)
@@ -131,9 +134,10 @@ bool block_database::promote(transaction_context& context,
 {
     try
     {
-        auto slot = hash_digest_index_.find(hash);
+        auto slot = hash_digest_index_->find(hash);
         auto index = candidate ? candidate_index_ : confirmed_index_;
-        return index.insert(height, slot);
+        auto result = index->insert(height, slot);
+        return result;
     }
     catch (std::out_of_range e)
     {

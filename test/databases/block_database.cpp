@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
     BOOST_CHECK_EQUAL(height, 0);
 
     height = -1;
-    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK(!instance.top(context, height, false));
     BOOST_CHECK_EQUAL(height, -1);
 }
 
