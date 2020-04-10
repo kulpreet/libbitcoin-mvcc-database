@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bitcoin/database/block_state.hpp>
 #include <bitcoin/database/databases/block_database.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
 
@@ -144,6 +145,30 @@ bool block_database::promote(transaction_context& context,
         context.abort();
         return false;
     }
+}
+
+code block_database::get_error(block_tuple_ptr block) const
+{
+    // Checksum stores error code if the block is invalid.
+    return is_failed(block->state) ? static_cast<error::error_code_t>(block->checksum) :
+        error::success;
+}
+
+void block_database::get_header_metadata(transaction_context& context,
+    const chain::header& header) const
+{
+    auto read_block = get(context, header.hash());
+    if (read_block == nullptr)
+        return;
+
+    const auto state = read_block->state;
+    header.metadata.exists = true;
+    header.metadata.error = get_error(read_block);
+    header.metadata.candidate = is_candidate(state);
+    header.metadata.confirmed = is_confirmed(state);
+    header.metadata.validated = is_valid(state) || is_failed(state);
+    // header.metadata.populated = transaction_count() != 0;
+    header.metadata.median_time_past = read_block->median_time_past;
 }
 
 } // namespace database

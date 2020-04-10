@@ -19,6 +19,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include <bitcoin/system.hpp>
+#include <bitcoin/database/block_state.hpp>
 #include <bitcoin/database/transaction_management/transaction_manager.hpp>
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
@@ -73,7 +74,7 @@ BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
 
     block_database instance{10, 1, 10, 1};
 
-    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, 1));
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
 
     auto from_index = instance.get(context, block0.header().hash());
     BOOST_CHECK(from_index->merkle_root == block0.header().merkle_root());
@@ -108,7 +109,7 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
 
     block_database instance{10, 1, 10, 1};
 
-    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, 1));
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
     BOOST_REQUIRE(instance.promote(context, block0.header().hash(), 0, true));
 
     size_t height = -1;
@@ -118,6 +119,32 @@ BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
     height = -1;
     BOOST_CHECK(!instance.top(context, height, false));
     BOOST_CHECK_EQUAL(height, -1);
+}
+
+BOOST_AUTO_TEST_CASE(block_database__get_header_metadata__smoke_test__success)
+{
+    static const auto settings = system::settings(system::config::settings::mainnet);
+    chain::block block0 = settings.genesis_block;
+    block0.set_transactions(
+    {
+       random_tx(0),
+       random_tx(1)
+    });
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    block_database instance{10, 1, 10, 1};
+
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, block_state::candidate));
+    instance.get_header_metadata(context, block0.header());
+
+    BOOST_REQUIRE_EQUAL(block0.header().metadata.error, error::success);
+    BOOST_REQUIRE(block0.header().metadata.exists);
+    // BOOST_REQUIRE(block0.header().metadata.populated);
+    BOOST_REQUIRE(!block0.header().metadata.validated);
+    BOOST_REQUIRE(block0.header().metadata.candidate);
+    BOOST_REQUIRE(!block0.header().metadata.confirmed);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

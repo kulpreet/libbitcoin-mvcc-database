@@ -102,6 +102,9 @@ public:
     block_tuple_ptr get(transaction_context& context,
         const system::hash_digest& hash) const;
 
+    /// get error from the state field of block_tuple_ptr
+    code get_error(block_tuple_ptr) const;
+
     /// Populate header metadata for the given header.
     void get_header_metadata(transaction_context& context,
         const system::chain::header& header) const;
