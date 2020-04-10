@@ -172,8 +172,8 @@ block_tuple_ptr block_database::get(transaction_context& context,
 // Find block from block hash index and then update it.
 // The update won't be visible until the transaction is committed
 bool block_database::promote(transaction_context& context,
-    const system::hash_digest &hash, size_t height,
-    bool candidate)
+    const system::hash_digest &hash, size_t height, bool candidate,
+    bool promote_or_demote)
 {
     block_tuple_ptr read_block;
     slot at_slot;
@@ -190,7 +190,7 @@ bool block_database::promote(transaction_context& context,
     }
 
     auto original = read_block->state;
-    const auto updated_state = update_confirmation_state(original, true, candidate);
+    const auto updated_state = update_confirmation_state(original, promote_or_demote, candidate);
 
     auto delta_data = std::make_shared<block_tuple_delta>();
     delta_data->state = updated_state;
@@ -201,8 +201,25 @@ bool block_database::promote(transaction_context& context,
     }
 
     auto index = candidate ? candidate_index_ : confirmed_index_;
-    auto result = index->insert(height, at_slot);
-    return result;
+
+    // add to the selected index - promote
+    if (promote_or_demote)
+        return index->insert(height, at_slot);
+
+    // remove from the selected index - demote
+    return index->erase(height);
+}
+
+bool block_database::promote(transaction_context& context,
+    const system::hash_digest &hash, size_t height, bool candidate)
+{
+    return promote(context, hash, height, candidate, true);
+}
+
+bool block_database::demote(transaction_context& context,
+    const system::hash_digest& hash, size_t height, bool candidate)
+{
+    return promote(context, hash, height, candidate, false);
 }
 
 code block_database::get_error(block_tuple_ptr block) const

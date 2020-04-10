@@ -156,6 +156,9 @@ private:
     std::shared_ptr<height_index_map> candidate_index_;
     std::shared_ptr<height_index_map> confirmed_index_;
     std::shared_ptr<hash_digest_index_map> hash_digest_index_;
+
+    bool promote(transaction_context& context,const system::hash_digest& hash,
+        size_t height, bool candidate, bool promote_or_demote);
 };
 
 } // namespace database
