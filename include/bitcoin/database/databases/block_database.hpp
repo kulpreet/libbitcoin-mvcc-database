@@ -75,7 +75,7 @@ public:
     // Startup and shutdown.
     // ------------------------------------------------------------------------
 
-    /// Initialize a new transaction database.
+    /// Initialize a new block database.
     bool create();
 
     /// Call before using the database.
@@ -91,7 +91,8 @@ public:
     //-------------------------------------------------------------------------
 
     /// The height of the highest candidate|confirmed block.
-    bool top(size_t& out_height, bool candidate) const;
+    bool top(transaction_context& context, size_t& out_height,
+        bool candidate) const;
 
     // /// Fetch block by block|header index height.
     block_tuple_ptr get(transaction_context& context, size_t height,
@@ -117,18 +118,21 @@ public:
         const uint32_t checksum, const uint8_t state);
 
     /// Populate pooled block transaction references, state is unchanged.
-    bool update_transactions(const system::chain::block& block);
+    bool update_transactions(transaction_context& context,
+        const system::chain::block& block);
 
     /// Promote pooled block to valid|invalid and set code.
-    bool validate(const system::hash_digest& hash, const system::code& error);
+    bool validate(transaction_context& context,
+        const system::hash_digest& hash, const system::code& error);
 
     /// Promote pooled|candidate block to candidate|confirmed
     /// respectively.
-    bool promote(const system::hash_digest& hash, size_t height, bool candidate);
+    bool promote(transaction_context& context,const system::hash_digest& hash,
+        size_t height, bool candidate);
 
     /// Demote candidate|confirmed header to pooled|pooled (not candidate).
-    bool demote(const system::hash_digest& hash, size_t height,
-        bool candidate);
+    bool demote(transaction_context& context, const system::hash_digest& hash,
+        size_t height, bool candidate);
 
 private:
     block_pool_ptr block_store_pool_;
@@ -149,10 +153,6 @@ private:
     height_index_map candidate_index_;
     height_index_map confirmed_index_;
     hash_digest_index_map hash_digest_index_;
-
-    // tracking top
-    std::atomic<size_t> candidate_top_;
-    std::atomic<size_t> confirmed_top_;
 };
 
 } // namespace database

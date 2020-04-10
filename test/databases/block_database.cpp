@@ -45,9 +45,17 @@ BOOST_AUTO_TEST_SUITE(block_database_tests)
 BOOST_AUTO_TEST_CASE(block_database__constructor__smoke_test__success)
 {
     block_database instance{10, 1, 10, 1};
-    size_t height;
-    BOOST_CHECK_EQUAL(instance.top(height, true), 0);
-    BOOST_CHECK_EQUAL(instance.top(height, false), 0);
+    size_t height = -1;
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, -1);
+
+    height = -1;
+    context = manager.begin_transaction();
+    BOOST_CHECK(!instance.top(context, height, false));
+    BOOST_CHECK_EQUAL(height, -1);
 }
 
 BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
@@ -68,11 +76,48 @@ BOOST_AUTO_TEST_CASE(block_database__store__allocate_store_and_index__success)
     BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, 1));
 
     auto from_index = instance.get(context, block0.header().hash());
-    BOOST_REQUIRE(from_index->merkle_root == block0.header().merkle_root());
+    BOOST_CHECK(from_index->merkle_root == block0.header().merkle_root());
 
     // block is not promoted yet, so not in candidate or confirmed indexes
     from_index = instance.get(context, 0, true);
-    BOOST_REQUIRE(from_index == nullptr);
+    BOOST_CHECK(from_index == nullptr);
+
+    // start new context, as last get aborted the transaction
+    context = manager.begin_transaction();
+    size_t height = -1;
+    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, -1);
+
+    height = -1;
+    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, -1);
+}
+
+BOOST_AUTO_TEST_CASE(block_database__promote__candidate__success)
+{
+    static const auto settings = system::settings(system::config::settings::mainnet);
+    chain::block block0 = settings.genesis_block;
+    block0.set_transactions(
+    {
+       random_tx(0),
+       random_tx(1)
+    });
+
+    transaction_manager manager;
+    auto context = manager.begin_transaction();
+
+    block_database instance{10, 1, 10, 1};
+
+    BOOST_REQUIRE(instance.store(context, block0.header(), 100, 1, 200, 1));
+    BOOST_REQUIRE(instance.promote(context, block0.header().hash(), 0, true));
+
+    size_t height = -1;
+    BOOST_CHECK(instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, 0);
+
+    height = -1;
+    BOOST_CHECK(!instance.top(context, height, true));
+    BOOST_CHECK_EQUAL(height, -1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
