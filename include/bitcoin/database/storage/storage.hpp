@@ -47,7 +47,7 @@ public:
      *
      * @param store the block store to use.
      */
-    store(const block_pool_ptr store);
+    store(const block_pool_ptr);
 
     /**
      * Destructs store, releases all its blocks to block pool
