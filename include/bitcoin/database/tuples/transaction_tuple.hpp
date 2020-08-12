@@ -17,15 +17,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_HPP
-#define LIBBITCOIN_MVCC_DATABASE_BLOCK_TUPLE_HPP
+#ifndef LIBBITCOIN_MVCC_DATABASE_TRANSACTION_TUPLE_HPP
+#define LIBBITCOIN_MVCC_DATABASE_TRANSACTION_TUPLE_HPP
 
 #include <atomic>
 #include <cstddef>
 
 #include <bitcoin/system.hpp>
 #include <bitcoin/database/define.hpp>
-#include <bitcoin/database/tuples/block_tuple_delta.hpp>
+#include <bitcoin/database/tuples/transaction_tuple_delta.hpp>
 
 namespace libbitcoin {
 namespace database {
@@ -34,63 +34,47 @@ namespace tuples {
 using namespace system;
 
 /*
- * Struct to hold block data in memory
+ * Struct to hold transaction data in memory
  * Attributes ordered for alignment.
  *
- * Note, the sizeof will return 104 bytes. The state field is padded
- * with 7 bytes by the compiler.
- *
- * This results in 7 bytes wasted over 104 bytes, i.e. almost 7%
- * wastage.
- *
- * TODO: Can we reduce this wasted space?
  */
-class block_tuple {
+class transaction_tuple {
 public:
 
-    static const size_t not_found = -1;
+    static const uint32_t not_found = -1;
 
-    block_tuple();
+    transaction_tuple();
 
     operator bool() const;
 
-    static void read_from_delta(block_tuple&, block_tuple_delta&);
+    static void read_from_delta(transaction_tuple&, transaction_tuple_delta&);
 
-    static void write_to_delta(const block_tuple&, block_tuple_delta&);
+    static void write_to_delta(const transaction_tuple&, transaction_tuple_delta&);
 
 //-------------------------------------------------------------
 // data stored
 
-    // header data, 80 bytes
-    // 32 bytes
-    hash_digest previous_block_hash;
-    // 32 bytes
-    hash_digest merkle_root;
-    // 4 bytes
-    uint32_t version;
-    // 4 bytes
-    uint32_t timestamp;
-    // 4 bytes
-    uint32_t bits;
-    // 4 bytes
-    uint32_t nonce;
+    // Transaction (without inputs and outputs) 20 bytes
 
-    // block data, 17 bytes (24 after padding state with 7 bytes)
-
-    // 8 bytes (assumption)
-    size_t height;
+    // 4 bytes
+    uint32_t height;
     // 4 bytes
     uint32_t median_time_past;
     // 4 bytes
-    uint32_t checksum;
+    uint32_t locktime;
+    // 4 bytes
+    uint32_t version;
+    // 2 bytes
+    uint16_t position;
     // 1 byte
-    uint8_t state;
-
+    uint8_t candidate;
+    // 1 byte
+    uint8_t witness_flag;
 //-------------------------------------------------------------
 
 };
 
-typedef std::shared_ptr<block_tuple> block_tuple_ptr;
+typedef std::shared_ptr<transaction_tuple> transaction_tuple_ptr;
 
 } // namespace tuples
 } // namespace database

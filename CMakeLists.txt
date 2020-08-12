@@ -151,6 +151,7 @@ add_library( ${CANONICAL_LIB_NAME}
     "./src/database/transaction_management/transaction_context.cpp"
     "./src/database/transaction_management/transaction_manager.cpp"
     "./src/database/tuples/block_tuple.cpp"
+    "./src/database/tuples/transaction_tuple.cpp"
     "./src/database/databases/block_database.cpp"
     "./src/database/storage/util.cpp"
     )
@@ -190,6 +191,7 @@ if (with-tests)
     "./test/transaction_management/transaction_context.cpp"
     "./test/tuples/mvcc_record.cpp"
     "./test/tuples/block_tuple.cpp"
+    "./test/tuples/transaction_tuple.cpp"
     "./test/storage/object_pool.cpp"
     "./test/storage/raw_block.cpp"
     "./test/container/concurrent_bitmap.cpp"
