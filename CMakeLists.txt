@@ -153,6 +153,7 @@ add_library( ${CANONICAL_LIB_NAME}
     "./src/database/tuples/block_tuple.cpp"
     "./src/database/tuples/transaction_tuple.cpp"
     "./src/database/databases/block_database.cpp"
+    "./src/database/databases/transaction_database.cpp"
     "./src/database/storage/util.cpp"
     )
 
@@ -187,6 +188,7 @@ if (with-tests)
   add_executable( libbitcoin-mvcc-database-test
     "./test/main.cpp"
     "./test/databases/block_database.cpp"
+    "./test/databases/transaction_database.cpp"
     "./test/transaction_management/transaction_manager.cpp"
     "./test/transaction_management/transaction_context.cpp"
     "./test/tuples/mvcc_record.cpp"

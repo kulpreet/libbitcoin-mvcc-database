@@ -54,7 +54,10 @@ public:
 //-------------------------------------------------------------
 // data stored
 
-    // Transaction (without inputs and outputs) 20 bytes
+    // Transaction (without inputs and outputs) 20 bytes.
+    // Inputs and outputs are varlen so not stored here.
+    // Even the input and ouput counts are varlen so they are not
+    // stored here either.
 
     // 4 bytes
     uint32_t height;

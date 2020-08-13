@@ -30,6 +30,8 @@ using namespace bc::system::chain;
 using namespace bc::database;
 using namespace bc::database::tuples;
 
+BOOST_AUTO_TEST_SUITE(block_database_tests)
+
 transaction random_tx(size_t fudge)
 {
     static const auto settings = system::settings(
@@ -40,8 +42,6 @@ transaction random_tx(size_t fudge)
     tx.metadata.link = fudge;
     return tx;
 }
-
-BOOST_AUTO_TEST_SUITE(block_database_tests)
 
 BOOST_AUTO_TEST_CASE(block_database__constructor__smoke_test__success)
 {

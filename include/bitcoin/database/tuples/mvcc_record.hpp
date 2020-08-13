@@ -26,6 +26,8 @@
 #include <bitcoin/database/transaction_management/transaction_context.hpp>
 #include <bitcoin/database/tuples/block_tuple.hpp>
 #include <bitcoin/database/tuples/block_tuple_delta.hpp>
+#include <bitcoin/database/tuples/transaction_tuple.hpp>
+#include <bitcoin/database/tuples/transaction_tuple_delta.hpp>
 #include <bitcoin/database/tuples/delta_iterator.hpp>
 
 namespace libbitcoin {

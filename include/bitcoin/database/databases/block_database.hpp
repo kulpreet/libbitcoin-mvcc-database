@@ -65,77 +65,62 @@ class BCD_API block_database
 {
 public:
     /// Construct the database.
-    block_database(uint64_t, uint64_t, uint64_t, uint64_t);
+  block_database(uint64_t block_size_limit, uint64_t block_reuse_limit,
+      uint64_t delta_size_limit, uint64_t delta_reuse_limit);
 
-    /// TODO: Take a snapshot.
-    /// TODO: Free all used memory - requires us to switch to object
-    /// pool first.
-    ~block_database() = default;
+  /// TODO: Take a snapshot.
+  /// TODO: Free all used memory - requires us to switch to object
+  /// pool first.
+  ~block_database() = default;
 
-    // Startup and shutdown.
-    // ------------------------------------------------------------------------
+  // Queries.
+  //-------------------------------------------------------------------------
 
-    /// Initialize a new block database.
-    bool create();
+  /// The height of the highest candidate|confirmed block.
+  bool top(transaction_context &context, size_t &out_height,
+           bool candidate) const;
 
-    /// Call before using the database.
-    bool open();
+  // /// Fetch block by block|header index height.
+  block_tuple_ptr get(transaction_context &context, size_t height,
+                      bool candidate) const;
 
-    /// Commit latest inserts.
-    void commit();
+  // /// Fetch block by hash.
+  block_tuple_ptr get(transaction_context &context,
+                      const system::hash_digest &hash) const;
 
-    /// Compact and write latest snapshot
-    bool close();
+  /// get error from the state field of block_tuple_ptr
+  code get_error(block_tuple_ptr) const;
 
-    // Queries.
-    //-------------------------------------------------------------------------
+  /// Populate header metadata for the given header.
+  void get_header_metadata(transaction_context &context,
+                           const system::chain::header &header) const;
 
-    /// The height of the highest candidate|confirmed block.
-    bool top(transaction_context& context, size_t& out_height,
-        bool candidate) const;
+  // Writers.
+  // ------------------------------------------------------------------------
 
-    // /// Fetch block by block|header index height.
-    block_tuple_ptr get(transaction_context& context, size_t height,
-        bool candidate) const;
+  /// Store header, validated at height, candidate, pending (but
+  /// unindexed).
+  /// Return memory location where data is stored and null_ptr on error.
+  bool store(transaction_context &context, const system::chain::header &header,
+             const size_t height, const uint32_t median_time_past,
+             const uint32_t checksum, const uint8_t state);
 
-    // /// Fetch block by hash.
-    block_tuple_ptr get(transaction_context& context,
-        const system::hash_digest& hash) const;
+  /// Populate pooled block transaction references, state is unchanged.
+  bool update_transactions(transaction_context &context,
+                           const system::chain::block &block);
 
-    /// get error from the state field of block_tuple_ptr
-    code get_error(block_tuple_ptr) const;
+  /// Promote pooled block to valid|invalid and set code.
+  bool validate(transaction_context &context, const system::hash_digest &hash,
+                const system::code &error);
 
-    /// Populate header metadata for the given header.
-    void get_header_metadata(transaction_context& context,
-        const system::chain::header& header) const;
+  /// Promote pooled|candidate block to candidate|confirmed
+  /// respectively.
+  bool promote(transaction_context &context, const system::hash_digest &hash,
+               size_t height, bool candidate);
 
-    // Writers.
-    // ------------------------------------------------------------------------
-
-    /// Store header, validated at height, candidate, pending (but
-    /// unindexed).
-    /// Return memory location where data is stored and null_ptr on error.
-    bool store(transaction_context& context,
-        const system::chain::header& header,
-        const size_t height, const uint32_t median_time_past,
-        const uint32_t checksum, const uint8_t state);
-
-    /// Populate pooled block transaction references, state is unchanged.
-    bool update_transactions(transaction_context& context,
-        const system::chain::block& block);
-
-    /// Promote pooled block to valid|invalid and set code.
-    bool validate(transaction_context& context,
-        const system::hash_digest& hash, const system::code& error);
-
-    /// Promote pooled|candidate block to candidate|confirmed
-    /// respectively.
-    bool promote(transaction_context& context,const system::hash_digest& hash,
-        size_t height, bool candidate);
-
-    /// Demote candidate|confirmed header to pooled|pooled (not candidate).
-    bool demote(transaction_context& context, const system::hash_digest& hash,
-        size_t height, bool candidate);
+  /// Demote candidate|confirmed header to pooled|pooled (not candidate).
+  bool demote(transaction_context &context, const system::hash_digest &hash,
+              size_t height, bool candidate);
 
 private:
     block_pool_ptr block_store_pool_;
