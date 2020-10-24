@@ -93,8 +93,9 @@ endif()
 
 # Find boost
 #------------------------------------------------------------------------------
-find_package( Boost 1.62.0 REQUIRED COMPONENTS
-    unit_test_framework )
+# For GCC, force dynamic linking to link to boost unit test
+add_definitions( -DBOOST_ALL_DYN_LINK )
+find_package( Boost 1.62.0 REQUIRED COMPONENTS unit_test_framework )
 
 set( boost_unit_test_framework_LIBS "-lboost_unit_test_framework" )
 
